@@ -1,0 +1,21 @@
+{
+  "name": "@gochim/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "고침 크롬 확장 — 네트워크 권한 없이 브라우저 안에서만 도는 한국어 교정기",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch",
+    "icons": "node scripts/make-icons.mjs",
+    "zip": "node build.mjs && node scripts/pack.mjs"
+  },
+  "dependencies": {
+    "@gochim/core": "*",
+    "@gochim/store": "*"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.290",
+    "esbuild": "^0.25.0"
+  }
+}

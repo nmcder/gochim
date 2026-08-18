@@ -31,5 +31,8 @@ jobs:
       - name: 데모 빌드
         run: npm run build -w @gochim/demo
 
+      - name: 확장 빌드
+        run: npm run build -w @gochim/extension
+
       - name: 골든 테스트셋 성적표
         run: node scripts/golden-report.mjs

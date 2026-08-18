@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>고침 확장 스모크 테스트</title>
+    <link rel="stylesheet" href="../dist/content.css" />
+    <style>
+      body {
+        margin: 0;
+        padding: 32px;
+        font: 15px/1.6 'Malgun Gothic', system-ui, sans-serif;
+        background: #fbfaf8;
+        color: #16150f;
+      }
+      h1 { font-size: 18px; margin: 0 0 6px; }
+      p.lede { margin: 0 0 24px; color: #5c5a51; font-size: 13.5px; }
+      section { margin-bottom: 28px; max-width: 720px; }
+      h2 { font-size: 13px; color: #8f8c81; text-transform: uppercase; letter-spacing: 0.06em; }
+      textarea, .rich {
+        width: 100%;
+        min-height: 120px;
+        padding: 14px;
+        font: 16px/1.7 'Malgun Gothic', system-ui, sans-serif;
+        border: 1px solid #e6e2d8;
+        border-radius: 8px;
+        background: #fff;
+        box-sizing: border-box;
+      }
+      input[type='text'] {
+        width: 100%;
+        padding: 10px 14px;
+        font: 16px/1.4 'Malgun Gothic', system-ui, sans-serif;
+        border: 1px solid #e6e2d8;
+        border-radius: 8px;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>고침 확장 스모크 테스트</h1>
+    <p class="lede">
+      크롬에 확장을 설치하지 않고 <code>dist/content.js</code>를 그대로 불러와 동작을 확인하는 페이지입니다.
+      <code>chrome.*</code> API가 없으면 기본 설정으로 동작하도록 되어 있어 그대로 돌아갑니다.
+    </p>
+
+    <section>
+      <h2>textarea — 거울 레이어</h2>
+      <textarea id="ta">
+어제는 정말 어의없는 일이 있었어. 담당자한테 몇일 뒤에 연락 준다고 했는데.
+이렇게 하면 안 되요. 나도 할수있는 만큼은 다 했을뿐이야.</textarea
+      >
+    </section>
+
+    <section>
+      <h2>input — 한 줄</h2>
+      <input type="text" id="one" value="지금 회의중이라 못 받아요. 끝나는대로 전화할께요." />
+    </section>
+
+    <section>
+      <h2>contenteditable — CSS Custom Highlight API</h2>
+      <div class="rich" id="rich" contenteditable="true">
+        그 사람이 그런 말을 했을리가 없어. 신발을 신은채로 들어올 사람이 아니야.
+      </div>
+    </section>
+
+    <script src="../dist/content.js"></script>
+  </body>
+</html>

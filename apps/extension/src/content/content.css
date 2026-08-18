@@ -1,0 +1,44 @@
+/*
+ * 콘텐츠 스크립트가 남의 페이지에 주입하는 유일한 CSS.
+ * 클래스 이름은 전부 gochim- 으로 시작해 호스트 스타일과 부딪히지 않게 한다.
+ */
+
+/* contenteditable — CSS Custom Highlight API. DOM을 건드리지 않고 칠한다. */
+::highlight(gochim-error) {
+  text-decoration: underline wavy #c2402d;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+::highlight(gochim-warning) {
+  text-decoration: underline wavy #a8760b;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+/* textarea·input — 같은 자리에 겹쳐 놓는 거울 레이어. 원본은 손대지 않는다. */
+.gochim-mirror {
+  position: fixed;
+  z-index: 2147483646;
+  margin: 0;
+  color: transparent;
+  background: transparent;
+  border-style: solid;
+  border-color: transparent;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  contain: strict;
+}
+
+.gochim-mark {
+  color: transparent;
+  /* 물결 밑줄은 글자 자리를 차지하지 않아 거울과 원본의 정렬이 깨지지 않는다. */
+  text-decoration: underline wavy #c2402d;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.gochim-mark--warning {
+  text-decoration-color: #a8760b;
+}

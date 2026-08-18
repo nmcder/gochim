@@ -12,12 +12,13 @@
     "build": "npm run build -w @gochim/core && npm run build -w @gochim/morph && npm run build -w @gochim/store",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b --pretty && tsc -p apps/demo/tsconfig.json --pretty",
+    "typecheck": "tsc -b --pretty && tsc -p apps/demo/tsconfig.json --pretty && tsc -p apps/extension/tsconfig.json --pretty",
     "dev": "npm run dev -w @gochim/demo",
     "golden:report": "npm run build -w @gochim/core && node scripts/golden-report.mjs",
     "probe:sync": "node scripts/sync-probe.mjs",
     "golden:build": "node scripts/build-golden.mjs",
-    "rules:doc": "npm run build -w @gochim/core && node scripts/rules-doc.mjs"
+    "rules:doc": "npm run build -w @gochim/core && node scripts/rules-doc.mjs",
+    "build:extension": "npm run build -w @gochim/extension"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

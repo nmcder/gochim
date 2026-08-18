@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>고침</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --ink: #16150f;
+        --soft: #5c5a51;
+        --faint: #8f8c81;
+        --line: #e6e2d8;
+        --paper: #fff;
+        --ok: #2f7a4f;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ink: #f2efe6;
+          --soft: #b6b2a6;
+          --faint: #85817a;
+          --line: #302f27;
+          --paper: #1c1c16;
+          --ok: #7cc79c;
+        }
+      }
+      body {
+        width: 280px;
+        margin: 0;
+        padding: 16px;
+        background: var(--paper);
+        color: var(--ink);
+        font: 14px/1.55 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', system-ui, sans-serif;
+        word-break: keep-all;
+      }
+      h1 {
+        margin: 0 0 2px;
+        font-size: 17px;
+        letter-spacing: -0.02em;
+      }
+      .status {
+        margin: 0 0 14px;
+        font-size: 12.5px;
+        color: var(--faint);
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 0;
+        border-top: 1px solid var(--line);
+      }
+      .row:first-of-type {
+        border-top: 0;
+      }
+      .row__label {
+        font-size: 13px;
+      }
+      .claim {
+        margin: 12px 0 0;
+        padding: 9px 11px;
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--ok) 12%, transparent);
+        color: var(--soft);
+        font-size: 12px;
+      }
+      .claim strong {
+        color: var(--ink);
+      }
+      button {
+        appearance: none;
+        font: inherit;
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 7px;
+        border: 1px solid var(--line);
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .meta {
+        margin: 12px 0 0;
+        font-size: 11px;
+        color: var(--faint);
+      }
+      input[type='checkbox'] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>고침</h1>
+    <p class="status" id="status">켜져 있습니다</p>
+
+    <div class="row">
+      <label class="row__label" for="enabled">맞춤법 밑줄 표시</label>
+      <input type="checkbox" id="enabled" />
+    </div>
+
+    <div class="row">
+      <span class="row__label">무시한 항목 <span id="ignored-count">0개</span></span>
+      <button type="button" id="clear-ignored">비우기</button>
+    </div>
+
+    <p class="claim">
+      이 확장에는 <strong>네트워크 권한이 없습니다.</strong> 입력한 글은 브라우저 밖으로 나가지 않습니다.
+    </p>
+    <p class="meta" id="meta"></p>
+
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>

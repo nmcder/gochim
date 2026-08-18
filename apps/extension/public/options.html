@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>고침 설정</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --paper: #fbfaf8;
+        --surface: #fff;
+        --ink: #16150f;
+        --soft: #5c5a51;
+        --faint: #8f8c81;
+        --line: #e6e2d8;
+        --ok: #2f7a4f;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #14140f;
+          --surface: #1c1c16;
+          --ink: #f2efe6;
+          --soft: #b6b2a6;
+          --faint: #85817a;
+          --line: #302f27;
+          --ok: #7cc79c;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 40px 24px 64px;
+        background: var(--paper);
+        color: var(--ink);
+        font: 15px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', system-ui, sans-serif;
+        word-break: keep-all;
+      }
+      main { max-width: 620px; margin: 0 auto; }
+      h1 { margin: 0 0 4px; font-size: 24px; letter-spacing: -0.02em; }
+      .lede { margin: 0 0 28px; color: var(--soft); font-size: 14px; }
+      section {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 18px;
+        margin-bottom: 16px;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 8px 0; }
+      .row + .row { border-top: 1px solid var(--line); }
+      .row__text { flex: 1; }
+      .row__title { font-size: 14px; }
+      .row__note { margin: 2px 0 0; font-size: 12.5px; color: var(--faint); }
+      label.check { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 5px 0; cursor: pointer; }
+      input[type='checkbox'] { width: 16px; height: 16px; cursor: pointer; }
+      input[type='range'] { width: 180px; }
+      .ignored { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; }
+      .ignored li {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        padding: 7px 0; border-top: 1px solid var(--line); font-size: 13.5px;
+      }
+      .ignored li:first-child { border-top: 0; }
+      .ignored code { font-size: 11.5px; color: var(--faint); font-family: ui-monospace, Consolas, monospace; }
+      button {
+        appearance: none; font: inherit; font-size: 12.5px; padding: 4px 10px; border-radius: 7px;
+        border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer;
+      }
+      button:disabled { opacity: 0.4; cursor: default; }
+      .empty { margin: 0; color: var(--faint); font-size: 13.5px; }
+      .claim {
+        margin: 0; padding: 12px 14px; border-radius: 8px;
+        background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--soft); font-size: 13px;
+      }
+      .claim strong { color: var(--ink); }
+      footer { margin-top: 20px; color: var(--faint); font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>고침 설정</h1>
+      <p class="lede">맞춤법 검사는 전부 이 브라우저 안에서 끝납니다. 설정도 이 기기에만 저장됩니다.</p>
+
+      <section>
+        <h2>동작</h2>
+        <div class="row">
+          <div class="row__text">
+            <div class="row__title">맞춤법 밑줄 표시</div>
+            <p class="row__note">끄면 콘텐츠 스크립트가 아무 일도 하지 않습니다.</p>
+          </div>
+          <input type="checkbox" id="enabled" />
+        </div>
+        <div class="row">
+          <div class="row__text">
+            <div class="row__title">확신도 하한 <span id="confidence-value">0.00</span></div>
+            <p class="row__note">올릴수록 조용해집니다. 확실한 오류만 보고 싶을 때 쓰세요.</p>
+          </div>
+          <input type="range" id="confidence" min="0" max="0.98" step="0.02" />
+        </div>
+      </section>
+
+      <section>
+        <h2>검사할 분류</h2>
+        <div id="categories"></div>
+        <p class="row__note">전부 끄면 전부 켠 것과 같습니다.</p>
+      </section>
+
+      <section>
+        <h2>무시한 항목</h2>
+        <ul class="ignored" id="ignored"></ul>
+        <p class="empty" id="ignored-empty">무시한 항목이 없습니다.</p>
+      </section>
+
+      <p class="claim">
+        이 확장의 권한 목록에는 <strong>네트워크가 없습니다.</strong> 입력한 글도, 무시 목록도 기기 밖으로 나가지
+        않습니다.
+      </p>
+      <footer id="meta"></footer>
+    </main>
+
+    <script type="module" src="./options.js"></script>
+  </body>
+</html>
