@@ -1,0 +1,45 @@
+{
+  "name": "@gochim/core",
+  "version": "0.1.0",
+  "description": "Korean spelling & spacing checker that runs fully on-device. No network, no API key, no data leaves the page.",
+  "keywords": [
+    "korean",
+    "hangul",
+    "spellcheck",
+    "spelling",
+    "grammar",
+    "proofreading",
+    "spacing",
+    "맞춤법",
+    "띄어쓰기",
+    "offline",
+    "privacy"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

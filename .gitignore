@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.vite/
+coverage/
+*.tsbuildinfo
+*.log
+
+# garu-ko 실측 하네스 — 에셋은 node_modules에서 복제한다 (npm run probe:sync)
+tools/probe/pkg/
+tools/probe/models/
+tools/probe/dist/
+tools/probe/*.txt
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

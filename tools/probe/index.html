@@ -1,0 +1,22 @@
+<!doctype html><meta charset=utf8><title>garu probe</title>
+<body style="font:14px monospace;white-space:pre-wrap;padding:16px">
+<div id=out>loading…</div>
+<script type="module">
+const out = document.getElementById('out');
+const log = s => out.textContent += s + "\n";
+try {
+  const t0 = performance.now();
+  const wasm = await import('./pkg/garu_wasm.js');
+  await wasm.default({ module_or_path: './pkg/garu_wasm_bg.wasm' });
+  const model = new Uint8Array(await (await fetch('./models/base.gmdl')).arrayBuffer());
+  const g = new wasm.GaruWasm(model, false);
+  out.textContent = `INIT OK in ${(performance.now()-t0).toFixed(0)}ms\n\n`;
+  for (const s of ['그러면 않되요','그러면 안 돼요','어의없다','어이없다','할수있다','할 수 있다','됬어','됐어']) {
+    const t = performance.now();
+    const r = g.analyze(s);
+    const toks = (r.tokens ?? r).map(x => `${x.text}/${x.pos}`).join(' + ');
+    log(`${JSON.stringify(s).padEnd(14)} -> ${toks}   [${(performance.now()-t).toFixed(2)}ms]`);
+  }
+  log("\nDONE");
+} catch (e) { out.textContent = "FAIL: " + e + "\n" + e.stack; }
+</script>

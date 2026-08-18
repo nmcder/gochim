@@ -1,0 +1,31 @@
+{
+  "name": "gochim-workspace",
+  "private": true,
+  "type": "module",
+  "description": "고침(Gochim) — 완전 온디바이스 한국어 맞춤법·띄어쓰기 교정기",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @gochim/core",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b --pretty",
+    "dev": "npm run dev -w @gochim/demo",
+    "golden:report": "npm run build -w @gochim/core && node scripts/golden-report.mjs",
+    "probe:sync": "node scripts/sync-probe.mjs",
+    "golden:build": "node scripts/build-golden.mjs",
+    "rules:doc": "npm run build -w @gochim/core && node scripts/rules-doc.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "garu-ko": "0.9.14",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # garu-ko는 0.9.14로 고정되어 있다. lockfile을 벗어난 설치는 막는다. (ADR 0001)
+      - run: npm ci
+
+      - name: 타입 검사
+        run: npm run typecheck
+
+      - name: 테스트 (규칙 예시 · 오탐 · 골든 테스트셋 정밀도)
+        run: npm test
+
+      - name: 코어 빌드
+        run: npm run build
+
+      - name: 데모 빌드
+        run: npm run build -w @gochim/demo
+
+      - name: 골든 테스트셋 성적표
+        run: node scripts/golden-report.mjs
