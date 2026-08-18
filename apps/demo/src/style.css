@@ -454,3 +454,35 @@ mark.hl--warning.is-active {
 .colophon__note {
   max-width: 60ch;
 }
+
+/* ── 형태소 분석 토글 ───────────────────────────────── */
+
+.morph {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.morph input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.morph__label {
+  font-weight: 600;
+}
+
+.morph__note {
+  color: var(--ink-faint);
+}
+
+.morph--busy {
+  opacity: 0.6;
+  cursor: progress;
+}

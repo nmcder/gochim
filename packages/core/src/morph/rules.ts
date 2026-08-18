@@ -1,3 +1,4 @@
+import { josa } from '../hangul.js'
 import type { MorphFinding, MorphRule, MorphRuleContext, Word } from '../types.js'
 import { morphemeOffset } from './words.js'
 
@@ -39,7 +40,7 @@ function splitFinding(word: Word, at: number, nnb: string): MorphFinding | null 
     start: word.start,
     end: word.start + trimmed.length,
     suggestions: [`${head} ${tail}`],
-    message: `의존명사 '${nnb}'는 앞말과 띄어 씁니다.`,
+    message: `의존명사 '${nnb}'${josa(nnb, '은/는')} 앞말과 띄어 씁니다.`,
     explain:
       '형태소 분석 결과 이 자리의 말이 의존명사로 쓰였습니다. 의존명사는 앞말과 띄어 씁니다. (같은 글자라도 조사로 쓰이면 붙여 씁니다)',
     refs: ['한글 맞춤법 제42항'],
@@ -116,7 +117,7 @@ export const morphJosaAttach: MorphRule = {
         start: prev.start,
         end: word.end,
         suggestions: [`${prev.text}${word.text}`],
-        message: `조사 '${word.text}'는 앞말에 붙여 씁니다.`,
+        message: `조사 '${word.text}'${josa(word.text, '은/는')} 앞말에 붙여 씁니다.`,
         explain: '형태소 분석 결과 이 말이 조사로 쓰였습니다. 조사는 앞말에 붙여 씁니다.',
         refs: ['한글 맞춤법 제41항'],
       })

@@ -1,4 +1,4 @@
-import { VERSION, allRules, check, ignoreKey, type Diagnostic } from '@gochim/core'
+import { VERSION, allRules, check, ignoreKey, type Analyzer, type Diagnostic } from '@gochim/core'
 
 const SAMPLE = [
   '어제는 정말 어의없는 일이 있었어. 담당자한테 몇일 뒤에 연락 준다고 했는데 아직도 소식이 없어.',
@@ -22,7 +22,15 @@ const statChars = $('stat-chars')
 const statIssues = $('stat-issues')
 const statTime = $('stat-time')
 const fixAllButton = $<HTMLButtonElement>('fix-all')
+const morphToggle = $<HTMLInputElement>('morph-toggle')
+const morphNote = $('morph-note')
 const resetIgnoredButton = $<HTMLButtonElement>('reset-ignored')
+
+/**
+ * 형태소 분석기. 1.6MB라 **켤 때만** 내려받는다.
+ * 이 지연 로딩이 코어와 형태소 층을 나눠 둔 이유 그 자체다.
+ */
+let analyzer: (Analyzer & { destroy(): void }) | null = null
 
 /** 이번 세션에서 무시한 항목. Phase 1에서 IndexedDB로 옮긴다. */
 const ignored = new Set<string>()
@@ -170,7 +178,7 @@ function applyOne(d: Diagnostic): void {
 function run(): void {
   const text = input.value
   const started = performance.now()
-  diagnostics = check(text, { ignore: ignored })
+  diagnostics = check(text, analyzer ? { ignore: ignored, analyzer } : { ignore: ignored })
   const elapsed = performance.now() - started
 
   activeIndex = -1
@@ -231,6 +239,33 @@ $('clear').addEventListener('click', () => {
 resetIgnoredButton.addEventListener('click', () => {
   ignored.clear()
   run()
+})
+
+morphToggle.addEventListener('change', async () => {
+  if (!morphToggle.checked) {
+    analyzer?.destroy()
+    analyzer = null
+    morphNote.textContent = '+1.6MB를 내려받아 품사까지 봅니다. 여전히 전부 기기 안에서.'
+    run()
+    return
+  }
+
+  morphToggle.disabled = true
+  morphNote.textContent = '형태소 분석기를 내려받는 중… (WASM 0.4MB + 모델 1.2MB)'
+  try {
+    const started = performance.now()
+    const { createAnalyzer } = await import('@gochim/morph')
+    analyzer = await createAnalyzer()
+    const elapsed = performance.now() - started
+    morphNote.textContent = `품사까지 봅니다. 초기화 ${elapsed.toFixed(0)}ms · 이 파일들도 네트워크 밖으로 나가지 않습니다.`
+  } catch (error) {
+    analyzer = null
+    morphToggle.checked = false
+    morphNote.textContent = `분석기를 불러오지 못했습니다: ${String(error)}`
+  } finally {
+    morphToggle.disabled = false
+    run()
+  }
 })
 
 $('rule-count').textContent = String(allRules.length)

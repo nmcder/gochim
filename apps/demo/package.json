@@ -10,7 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@gochim/core": "*"
+    "@gochim/core": "*",
+    "@gochim/morph": "*"
   },
   "devDependencies": {
     "vite": "^7.0.0"
