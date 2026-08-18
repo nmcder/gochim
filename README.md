@@ -25,12 +25,12 @@
 
 | | |
 | --- | --- |
-| **정밀도** | **1.000** (오탐 0건 / 정상 문장 297개) |
-| 재현율 | 0.849 (오류 구간 132개 중 112개 검출) |
-| 규칙 | 41개 (예시 202개, 반례 96개가 테스트로 강제됨) |
-| 테스트 | 423개 |
-| 검사 속도 | 2,150자 **0.58ms** |
-| 번들 | minified 85 kB · **gzip 18.5 kB**, 런타임 의존성 0개 |
+| **정밀도** | **1.000** (오탐 0건 / 정상 문장 297개) — 형태소 층을 켜도 1.000 |
+| 재현율 | 0.849 (1층만) → **0.879** (형태소 층 포함) |
+| 규칙 | 문자열 41개 + 형태소 2개. 예시 202개, 반례 96개가 테스트로 강제됨 |
+| 테스트 | 456개 |
+| 검사 속도 | 2,150자 **0.58ms** (형태소 층 초기화 101ms, 크롬 실측) |
+| 번들 | 코어 minified 85 kB · **gzip 18.5 kB**, 런타임 의존성 0개 |
 
 ```bash
 npm run golden:report   # 분류별 검출률 · 오탐 목록 · 아직 못 잡는 오류 목록
@@ -51,6 +51,7 @@ fix('몇일 뒤에 할수있어.')
 - **받침으로 푸는 규칙** — `경쟁율→경쟁률`(두음법칙), `년도별→연도별`, `책예요→책이에요`
 - 각 진단은 **왜 틀렸는지**와 **한글 맞춤법 조항**을 함께 준다 → [규칙 목록](docs/rules.md)
 - URL·이메일·코드·HTML 태그·파일 경로·짧은 인용은 건드리지 않는다
+- 형태소 층을 켜면 품사로 판정한다 — `먹을만큼만`은 잡고 `하늘만큼 땅만큼`은 그대로 둔다
 
 ## 지금 안 되는 것 (의도적으로)
 
@@ -73,35 +74,45 @@ fix('몇일 뒤에 할수있어.')
 ## 구조
 
 ```
-packages/core/     @gochim/core — 엔진. DOM도 크롬 API도 모른다
+packages/core/     @gochim/core  — 엔진. DOM도 크롬 API도 WASM도 모른다
+packages/morph/    @gochim/morph — 형태소 분석기 어댑터 (garu-ko)
+packages/store/    @gochim/store — 무시 사전 (IndexedDB)
 apps/demo/         웹 데모 (Vite)
+apps/extension/    크롬 확장 (MV3) — 네트워크 권한 없음
 data/golden/       골든 테스트셋 — 정확도 판정의 유일한 기준
 tools/probe/       garu-ko 브라우저 실측 하네스
 docs/decisions/    설계 기록(ADR)
 ```
 
-판정은 3층으로 쌓는다. 지금은 1층만 구현되어 있다.
+판정은 3층으로 쌓는다.
 
 | 층 | 방식 | 상태 |
 | --- | --- | --- |
 | 1층 · 규칙 사전 | 문자열 패턴 + 받침 계산 | ✅ |
-| 2층 · 형태소 이상 탐지 | garu-ko 분석 결과 | Phase 1 |
-| 3층 · 품사 기반 띄어쓰기 | POS 태그 | Phase 1 |
+| 3층 · 품사 기반 띄어쓰기 | 형태소 태그(NNB·J*) | ✅ |
+| 2층 · 형태소 이상 탐지 | 과분할·점수 기반 의심 구간 | 다음 |
+
+**코어는 형태소 분석기를 모른다.** `check(text, { analyzer })`로 주입받을 뿐이다.
+그래서 코어만 쓰면 18.5 kB로 끝나고, 정확도가 더 필요할 때만 1.6 MB를 얹는다.
 
 ## 개발
 
 ```bash
 npm install
-npm run dev            # 웹 데모
-npm test               # 테스트
-npm run golden:report  # 골든 테스트셋 성적표 (정밀도·재현율·미검출 목록)
-npm run probe:sync     # garu-ko 실측 하네스 에셋 동기화
+npm run dev                     # 웹 데모
+npm test                        # 테스트
+npm run typecheck               # 코어·데모·확장 전부
+npm run golden:report           # 골든 성적표 (1층만)
+npm run golden:report -- --morph  # 형태소 층까지 켜고
+npm run build:extension         # 크롬 확장 → apps/extension/dist
+npm run probe:sync              # garu-ko 실측 하네스 에셋 동기화
 ```
 
 ## 로드맵
 
 - [x] **Phase 0** — 워크스페이스, 골든 테스트셋, 1층 규칙 엔진, 웹 데모
-- [ ] **Phase 1** — garu-ko 연동(2·3층), 무시 사전(IndexedDB), 크롬 확장 밑줄 오버레이, `@gochim/core` npm 배포
+- [x] **Phase 1** — 형태소 층(3층), 무시 사전(IndexedDB), 크롬 확장 MV3 밑줄 오버레이
+- [ ] **Phase 2** — 2층(형태소 이상 탐지), 확장에 형태소 층 연결(Worker 분리), npm 배포, GitHub Releases
 
 ## 설계 기록
 
@@ -109,6 +120,7 @@ npm run probe:sync     # garu-ko 실측 하네스 에셋 동기화
 2. [정밀도를 재현율보다 우선한다](docs/decisions/0002-precision-first.md)
 3. [판정은 3층, 저장소는 둘로](docs/decisions/0003-three-layers-and-repo-split.md)
 4. [골든 테스트셋을 코드보다 먼저 만든다](docs/decisions/0004-golden-set-first.md)
+5. [확장은 호스트 DOM을 건드리지 않는다](docs/decisions/0005-extension-never-touches-host-dom.md)
 
 ## 라이선스
 
