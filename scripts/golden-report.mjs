@@ -13,7 +13,18 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const { check, fix } = await import(pathToFileURL(resolve(ROOT, 'packages/core/dist/index.js')).href)
+const { check: rawCheck, fix: rawFix } = await import(pathToFileURL(resolve(ROOT, 'packages/core/dist/index.js')).href)
+
+// --morph: 형태소 층(3층)까지 켜고 잰다. 끄고 잰 값과 나란히 보면 층별 기여가 드러난다.
+const useMorph = process.argv.includes('--morph')
+let analyzer = null
+if (useMorph) {
+  const { createAnalyzer } = await import(pathToFileURL(resolve(ROOT, 'packages/morph/dist/index.js')).href)
+  analyzer = await createAnalyzer()
+}
+const options = analyzer ? { analyzer } : {}
+const check = (t) => rawCheck(t, options)
+const fix = (t) => rawFix(t, options)
 
 const golden = JSON.parse(readFileSync(resolve(ROOT, 'data/golden/golden.json'), 'utf8'))
 const overlaps = (d, s) => d.start < s.end && s.start < d.end
@@ -97,4 +108,5 @@ for (const [hint, items] of [...byHint.entries()].sort((a, b) => b[1].length - a
   console.log(`  ${String(items.length).padStart(3)}건  ${hint}`)
   console.log(`         예) ${items[0].span.wrong} → ${items[0].span.right}   «${items[0].sentence}»`)
 }
+if (analyzer) analyzer.destroy()
 console.log()

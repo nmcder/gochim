@@ -1,0 +1,49 @@
+{
+  "name": "@gochim/morph",
+  "version": "0.1.0",
+  "description": "Morphological analyzer adapter for @gochim/core — enables part-of-speech aware Korean spacing rules, fully on-device.",
+  "keywords": [
+    "korean",
+    "morphological-analysis",
+    "pos-tagging",
+    "spellcheck",
+    "형태소",
+    "맞춤법",
+    "offline"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "garu-ko": "0.9.14"
+  },
+  "peerDependencies": {
+    "@gochim/core": "^0.1.0"
+  },
+  "devDependencies": {
+    "@gochim/core": "*"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -89,6 +89,57 @@ export interface Rule {
   counterExamples?: string[]
 }
 
+/** 형태소 분석기가 돌려주는 형태소 하나. */
+export interface Morpheme {
+  /** 형태소의 표면형. 활용으로 어절 표기와 다를 수 있다 (`할` → `하` + `ㄹ`). */
+  text: string
+  /** 품사 태그. `NNB`(의존명사), `JKB`(부사격 조사) 등 세종 계열 태그를 쓴다. */
+  pos: string
+  /** 이 형태소가 속한 **어절**의 시작 위치. 형태소 자체의 위치가 아니다. */
+  start: number
+  /** 어절의 끝 위치 (exclusive). */
+  end: number
+}
+
+/** 어절 하나와 그 안의 형태소들. */
+export interface Word {
+  start: number
+  end: number
+  text: string
+  morphemes: Morpheme[]
+}
+
+/**
+ * 형태소 분석기.
+ *
+ * 코어는 이 인터페이스만 알고, 구현은 밖에서 주입받는다.
+ * 덕분에 `@gochim/core`는 WASM도 모델 파일도 의존하지 않는다.
+ */
+export interface Analyzer {
+  analyze(text: string): readonly Morpheme[]
+}
+
+/** 형태소 정보를 보고 판정하는 규칙. 정규식 규칙과 달리 문장 전체의 분석 결과를 본다. */
+export interface MorphRule {
+  id: string
+  category: Category
+  severity: Severity
+  confidence: number
+  run(ctx: MorphRuleContext): MorphFinding[]
+  examples: Example[]
+  counterExamples?: string[]
+}
+
+export interface MorphRuleContext {
+  text: string
+  words: readonly Word[]
+}
+
+export interface MorphFinding extends Finding {
+  start: number
+  end: number
+}
+
 export interface CheckOptions {
   /**
    * 무시할 항목. `ignoreKey(diagnostic)` 로 만든 키를 담는다.
@@ -103,4 +154,11 @@ export interface CheckOptions {
   limit?: number
   /** 사용할 규칙 목록. 지정하지 않으면 내장 규칙 전체. */
   rules?: readonly Rule[]
+  /**
+   * 형태소 분석기. 넘기면 품사 기반 규칙(2·3층)이 함께 돈다.
+   * `@gochim/morph`의 `createAnalyzer()`가 이 인터페이스를 구현한다.
+   */
+  analyzer?: Analyzer
+  /** 사용할 형태소 규칙. 지정하지 않으면 내장 형태소 규칙 전체. */
+  morphRules?: readonly MorphRule[]
 }
