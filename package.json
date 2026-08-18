@@ -9,7 +9,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build -w @gochim/core && npm run build -w @gochim/morph",
+    "build": "npm run build -w @gochim/core && npm run build -w @gochim/morph && npm run build -w @gochim/store",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty && tsc -p apps/demo/tsconfig.json --pretty",

@@ -1,4 +1,5 @@
-import { VERSION, allRules, check, ignoreKey, type Analyzer, type Diagnostic } from '@gochim/core'
+import { VERSION, allRules, check, type Analyzer, type Diagnostic } from '@gochim/core'
+import { openIgnoreStore } from '@gochim/store'
 
 const SAMPLE = [
   '어제는 정말 어의없는 일이 있었어. 담당자한테 몇일 뒤에 연락 준다고 했는데 아직도 소식이 없어.',
@@ -32,8 +33,11 @@ const resetIgnoredButton = $<HTMLButtonElement>('reset-ignored')
  */
 let analyzer: (Analyzer & { destroy(): void }) | null = null
 
-/** 이번 세션에서 무시한 항목. Phase 1에서 IndexedDB로 옮긴다. */
-const ignored = new Set<string>()
+/**
+ * 무시 사전. IndexedDB에 남으므로 브라우저를 닫았다 열어도 유지된다.
+ * 같은 밑줄을 매번 다시 지우게 만들면 사용자는 도구를 끈다.
+ */
+const ignoreStore = await openIgnoreStore({ name: 'gochim-demo' })
 
 let diagnostics: Diagnostic[] = []
 let activeIndex = -1
@@ -77,7 +81,8 @@ function renderHighlights(text: string): void {
 function renderFindings(): void {
   findingList.replaceChildren()
   emptyNote.hidden = diagnostics.length > 0
-  resetIgnoredButton.hidden = ignored.size === 0
+  resetIgnoredButton.hidden = ignoreStore.keys().size === 0
+  resetIgnoredButton.textContent = `무시 ${ignoreStore.keys().size}개 되돌리기`
 
   if (diagnostics.length === 0) {
     const hasText = input.value.trim().length > 0
@@ -138,9 +143,9 @@ function renderFindings(): void {
     ignoreButton.type = 'button'
     ignoreButton.className = 'btn btn--sm btn--quiet'
     ignoreButton.textContent = '무시'
-    ignoreButton.addEventListener('click', (event) => {
+    ignoreButton.addEventListener('click', async (event) => {
       event.stopPropagation()
-      ignored.add(ignoreKey(d))
+      await ignoreStore.add(d)
       run()
     })
 
@@ -178,7 +183,8 @@ function applyOne(d: Diagnostic): void {
 function run(): void {
   const text = input.value
   const started = performance.now()
-  diagnostics = check(text, analyzer ? { ignore: ignored, analyzer } : { ignore: ignored })
+  const ignore = ignoreStore.keys()
+  diagnostics = check(text, analyzer ? { ignore, analyzer } : { ignore })
   const elapsed = performance.now() - started
 
   activeIndex = -1
@@ -236,8 +242,8 @@ $('clear').addEventListener('click', () => {
   input.focus()
 })
 
-resetIgnoredButton.addEventListener('click', () => {
-  ignored.clear()
+resetIgnoredButton.addEventListener('click', async () => {
+  await ignoreStore.clear()
   run()
 })
 

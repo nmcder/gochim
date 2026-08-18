@@ -9,6 +9,7 @@ export default defineConfig({
       // 배포 빌드에서는 어차피 같은 코드가 번들된다.
       '@gochim/core': fileURLToPath(new URL('../../packages/core/src/index.ts', import.meta.url)),
       '@gochim/morph': fileURLToPath(new URL('../../packages/morph/src/index.ts', import.meta.url)),
+      '@gochim/store': fileURLToPath(new URL('../../packages/store/src/index.ts', import.meta.url)),
     },
   },
   optimizeDeps: {

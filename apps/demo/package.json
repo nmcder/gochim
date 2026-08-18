@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@gochim/core": "*",
-    "@gochim/morph": "*"
+    "@gochim/morph": "*",
+    "@gochim/store": "*"
   },
   "devDependencies": {
     "vite": "^7.0.0"
