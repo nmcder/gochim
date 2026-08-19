@@ -1,4 +1,5 @@
-import { VERSION, allRules, check, type Analyzer, type Diagnostic } from '@gochim/core'
+import { VERSION, allRules, check, mergeDiagnostics, type Diagnostic } from '@gochim/core'
+import type { Request as MorphRequest, Response as MorphResponse } from './morph-worker.js'
 import { openIgnoreStore } from '@gochim/store'
 
 const SAMPLE = [
@@ -28,10 +29,17 @@ const morphNote = $('morph-note')
 const resetIgnoredButton = $<HTMLButtonElement>('reset-ignored')
 
 /**
- * 형태소 분석기. 1.6MB라 **켤 때만** 내려받는다.
- * 이 지연 로딩이 코어와 형태소 층을 나눠 둔 이유 그 자체다.
+ * 형태소 층은 워커에서 돈다.
+ *
+ * 1.6MB라 **켤 때만** 내려받고(코어와 형태소 층을 나눠 둔 이유),
+ * 2만 자에서 385ms가 걸리므로 **별도 스레드에서** 돌린다(타이핑을 막지 않는 이유).
  */
-let analyzer: (Analyzer & { destroy(): void }) | null = null
+let morphWorker: Worker | null = null
+/** 문자열 규칙(1층) 결과. 즉시 나온다. */
+let baseDiagnostics: Diagnostic[] = []
+/** 형태소 층(3층) 결과. 워커에서 조금 늦게 도착한다. */
+let morphDiagnostics: Diagnostic[] = []
+let morphRequestId = 0
 
 /**
  * 무시 사전. IndexedDB에 남으므로 브라우저를 닫았다 열어도 유지된다.
@@ -180,21 +188,34 @@ function applyOne(d: Diagnostic): void {
   run()
 }
 
+/** 두 층의 결과를 합쳐 다시 그린다. 같은 자리에 밑줄이 두 번 그어지지 않게 엔진 규칙으로 정리한다. */
+function paint(): void {
+  diagnostics =
+    morphDiagnostics.length > 0 ? mergeDiagnostics(baseDiagnostics, morphDiagnostics) : baseDiagnostics
+  statIssues.textContent = String(diagnostics.length)
+  fixAllButton.disabled = diagnostics.length === 0
+  renderHighlights(input.value)
+  renderFindings()
+}
+
 function run(): void {
   const text = input.value
   const started = performance.now()
-  const ignore = ignoreStore.keys()
-  diagnostics = check(text, analyzer ? { ignore, analyzer } : { ignore })
+  baseDiagnostics = check(text, { ignore: ignoreStore.keys() })
   const elapsed = performance.now() - started
 
   activeIndex = -1
+  // 글이 바뀌었으니 이전 형태소 결과는 위치가 어긋난다. 새 결과가 올 때까지 비운다.
+  morphDiagnostics = []
   statChars.textContent = String(text.length)
-  statIssues.textContent = String(diagnostics.length)
   statTime.textContent = `${elapsed.toFixed(1)}ms`
-  fixAllButton.disabled = diagnostics.length === 0
+  paint()
 
-  renderHighlights(text)
-  renderFindings()
+  if (morphWorker) {
+    morphRequestId += 1
+    const request: MorphRequest = { id: morphRequestId, text }
+    morphWorker.postMessage(request)
+  }
 }
 
 /** 입력 중에는 프레임 하나만큼 미뤄 타이핑을 막지 않는다. */
@@ -247,31 +268,37 @@ resetIgnoredButton.addEventListener('click', async () => {
   run()
 })
 
-morphToggle.addEventListener('change', async () => {
+morphToggle.addEventListener('change', () => {
   if (!morphToggle.checked) {
-    analyzer?.destroy()
-    analyzer = null
+    morphWorker?.terminate()
+    morphWorker = null
+    morphDiagnostics = []
     morphNote.textContent = '+1.6MB를 내려받아 품사까지 봅니다. 여전히 전부 기기 안에서.'
     run()
     return
   }
 
-  morphToggle.disabled = true
   morphNote.textContent = '형태소 분석기를 내려받는 중… (WASM 0.4MB + 모델 1.2MB)'
-  try {
-    const started = performance.now()
-    const { createAnalyzer } = await import('@gochim/morph')
-    analyzer = await createAnalyzer()
-    const elapsed = performance.now() - started
-    morphNote.textContent = `품사까지 봅니다. 초기화 ${elapsed.toFixed(0)}ms · 이 파일들도 네트워크 밖으로 나가지 않습니다.`
-  } catch (error) {
-    analyzer = null
-    morphToggle.checked = false
-    morphNote.textContent = `분석기를 불러오지 못했습니다: ${String(error)}`
-  } finally {
-    morphToggle.disabled = false
-    run()
-  }
+  morphWorker = new Worker(new URL('./morph-worker.ts', import.meta.url), { type: 'module' })
+  morphWorker.addEventListener('message', (event: MessageEvent<MorphResponse>) => {
+    const message = event.data
+    if (message.type === 'ready') {
+      morphNote.textContent = `품사까지 봅니다. 초기화 ${message.initMs}ms · 별도 스레드에서 돌아 타이핑을 막지 않습니다.`
+      return
+    }
+    if (message.type === 'error') {
+      morphToggle.checked = false
+      morphWorker?.terminate()
+      morphWorker = null
+      morphNote.textContent = `분석기를 불러오지 못했습니다: ${message.message}`
+      return
+    }
+    // 늦게 도착한 옛 요청의 결과는 버린다. 그 사이 글이 바뀌었다.
+    if (message.id !== morphRequestId) return
+    morphDiagnostics = message.diagnostics
+    paint()
+  })
+  run()
 })
 
 $('rule-count').textContent = String(allRules.length)

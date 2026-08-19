@@ -17,6 +17,11 @@ export default defineConfig({
     // 사전 번들에 들어가면 그 경로가 깨진다.
     exclude: ['garu-ko'],
   },
+  worker: {
+    // 워커가 garu-ko의 WASM 글루를 동적 import 하므로 코드 분할이 필요하다.
+    // Vite 기본값인 iife로는 분할할 수 없다.
+    format: 'es',
+  },
   build: {
     target: 'es2022',
     outDir: 'dist',
