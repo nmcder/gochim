@@ -256,7 +256,8 @@ export const myeotBeon = defineRule({
   category: 'spacing',
   confidence: 0.94,
   // 관형사 '몇'과 단위 명사는 띄어 쓴다.
-  pattern: /(?<![가-힣])몇(번|개|명|시|분|살|권|장|가지|군데|차례)(?=[을를이가은는도만의에]|\s|[.,!?]|$)/g,
+  // '몇분뒤에'처럼 뒤에 다른 말이 붙어도 잡는다. '몇몇'만 한 낱말이라 뺀다.
+  pattern: /(?<![가-힣])몇(번|개|명|시|분|살|권|장|가지|군데|차례|달|해|주|가마|톨)/g,
   resolve(ctx) {
     const unit = ctx.match[1] ?? ''
     return {
@@ -266,7 +267,10 @@ export const myeotBeon = defineRule({
       refs: ['한글 맞춤법 제43항'],
     }
   },
-  examples: [{ wrong: '내가 몇번을 말했는지 기억도 안 나.', right: '내가 몇 번을 말했는지 기억도 안 나.' }],
+  examples: [
+    { wrong: '내가 몇번을 말했는지 기억도 안 나.', right: '내가 몇 번을 말했는지 기억도 안 나.' },
+    { wrong: '몇분 뒤에 답장이 왔다.', right: '몇 분 뒤에 답장이 왔다.' },
+  ],
   counterExamples: ['며칠 뒤에 보자.', '몇몇 사람만 왔다.'],
 })
 

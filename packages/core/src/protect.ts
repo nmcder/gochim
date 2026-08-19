@@ -44,9 +44,58 @@ function merge(ranges: Range[]): Range[] {
   return out
 }
 
+/**
+ * 낱말을 **쓴** 것이 아니라 **언급한** 자리를 찾는다.
+ *
+ * 맞춤법 이야기를 하는 글에서는 틀린 표기가 일부러 등장한다.
+ *
+ *   특히 않과 안을 구별하는 게 제일 어렵고
+ *   왠지와 웬지도 뭐가 맞는지 헷갈릴 때가 많다
+ *   그리고 할께 할게 같은 표현도 자주 틀린다
+ *
+ * 여기서 `웬지`를 `왠지`로 고치면 문장이 뜻을 잃는다. 교정기가 맞춤법 설명글을
+ * 망가뜨리는 것은 눈에 잘 띄는 실패라서, 규칙마다 막지 않고 엔진 앞단에서 걸러낸다.
+ *
+ * 판정은 두 조건을 모두 만족할 때만 한다.
+ *   1. 같은 문장에 맞춤법을 화제로 삼는 말이 있다 (맞춤법·띄어쓰기·구별·헷갈리다 등)
+ *   2. 짧은 낱말 둘이 `와/과/랑`으로 묶이거나 나란히 놓여 있다
+ */
+const META_CUE = /맞춤법|띄어쓰기|구별|헷갈|표기|잘못\s*쓰|틀리게|뭐가\s*맞|어느\s*게\s*맞|같은\s*표현/
+
+/** 언급으로 볼 낱말 쌍. `않과 안`, `왠지와 웬지`, `할께 할게` */
+const MENTION_PAIR = /([가-힣]{1,4})(?:와|과|랑|이나|나)\s*([가-힣]{1,4})(?=[을를은는도이가]|\s|$)|([가-힣]{2,4})\s+([가-힣]{2,4})(?=\s*같은)/g
+
+function mentionRanges(text: string): Range[] {
+  const found: Range[] = []
+  // 문장 단위로 끊는다. 이 글처럼 마침표가 없을 수도 있어 줄바꿈도 경계로 본다.
+  const sentences: Array<{ text: string; offset: number }> = []
+  let start = 0
+  const boundary = /[.!?\n]/g
+  let m: RegExpExecArray | null
+  while ((m = boundary.exec(text)) !== null) {
+    sentences.push({ text: text.slice(start, m.index + 1), offset: start })
+    start = m.index + 1
+  }
+  if (start < text.length) sentences.push({ text: text.slice(start), offset: start })
+
+  for (const sentence of sentences) {
+    if (!META_CUE.test(sentence.text)) continue
+    MENTION_PAIR.lastIndex = 0
+    let pair: RegExpExecArray | null
+    while ((pair = MENTION_PAIR.exec(sentence.text)) !== null) {
+      if (pair[0].length === 0) {
+        MENTION_PAIR.lastIndex += 1
+        continue
+      }
+      found.push([sentence.offset + pair.index, sentence.offset + pair.index + pair[0].length])
+    }
+  }
+  return found
+}
+
 /** 보호 구간 목록. 정렬·병합되어 있다. */
 export function protectedRanges(text: string): Range[] {
-  const found: Range[] = []
+  const found: Range[] = mentionRanges(text)
   for (const re of PROTECTORS) {
     re.lastIndex = 0
     let m: RegExpExecArray | null

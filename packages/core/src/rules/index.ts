@@ -5,6 +5,7 @@ import { doeDwae, doeSentenceFinal, dwaeJiAnh } from './doe.js'
 import { endingRules } from './endings.js'
 import { confusable, lexicon } from './lexicon.js'
 import { confusablePairRules } from './confusable-pairs.js'
+import { proseSpacingRules } from './spacing-prose.js'
 import { formalRules } from './formal.js'
 import { hanjaRules } from './hanja.js'
 import { honorificRules } from './honorific.js'
@@ -19,6 +20,7 @@ export * from './doe.js'
 export * from './endings.js'
 export * from './lexicon.js'
 export * from './confusable-pairs.js'
+export * from './spacing-prose.js'
 export * from './formal.js'
 export * from './hanja.js'
 export * from './honorific.js'
@@ -54,5 +56,6 @@ export const allRules: Rule[] = [
   ...formalRules,
   ...hanjaRules,
   ...confusablePairRules,
+  ...proseSpacingRules,
   ...endingRules,
 ]

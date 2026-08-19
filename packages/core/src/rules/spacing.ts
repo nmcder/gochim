@@ -44,14 +44,15 @@ export const nnbSu = defineRule({
   id: 'nnb-su',
   category: 'spacing',
   confidence: 0.96,
-  pattern: /([가-힣])( ?)수( ?)(있|없)/g,
+  // '수' 뒤에 보조사가 끼어들 수 있다 — '좋을 수만은 없다', '할 수도 있다'.
+  pattern: /([가-힣])( ?)수((?:만은|만|도|가|는|밖에)?)( ?)(있|없)/g,
   resolve(ctx) {
-    const [, prev = '', sp1 = '', sp2 = '', tail = ''] = ctx.match
+    const [, prev = '', sp1 = '', josa = '', sp2 = '', tail = ''] = ctx.match
     if (sp1 && sp2) return null // 이미 올바름
     if (!hasL(prev)) return null
     if (NOUN_SU.has(prev + '수')) return null
     return {
-      suggestions: [`${prev} 수 ${tail}`],
+      suggestions: [`${prev} 수${josa} ${tail}`],
       message: "의존명사 '수'는 앞말과 띄어 씁니다.",
       explain:
         "가능성·능력을 뜻하는 '수'는 의존명사입니다. 관형사형 어미 '-ㄹ' 뒤에서 띄어 쓰고, 뒤의 '있다/없다'도 별개의 용언이라 또 띄어 씁니다.",
@@ -61,8 +62,14 @@ export const nnbSu = defineRule({
   examples: [
     { wrong: '누구나 할수있는 동작이에요.', right: '누구나 할 수 있는 동작이에요.' },
     { wrong: '지금은 갈수 없어.', right: '지금은 갈 수 없어.' },
+    { wrong: '항상 좋을수만은 없다.', right: '항상 좋을 수만은 없다.' },
   ],
-  counterExamples: ['이번에는 큰 실수 없이 발표를 마쳤다.', '누구나 할 수 있는 동작이에요.'],
+  counterExamples: [
+    '이번에는 큰 실수 없이 발표를 마쳤다.',
+    '누구나 할 수 있는 동작이에요.',
+    '리더십을 기를 수 있었습니다.',
+    '보호자가 동행해야 검사를 받을 수 있다.',
+  ],
 })
 
 export const nnbSuBakke = defineRule({
@@ -108,7 +115,8 @@ export const nnbGeo = defineRule({
   id: 'nnb-geo',
   category: 'spacing',
   confidence: 0.93,
-  pattern: /([가-힣])거(야|예요|에요|였|입니다)/g,
+  // '지'는 뺐다 — 설거지·거지처럼 명사 안에 들어 있어 '설 거지'를 만든다.
+  pattern: /([가-힣])거(야|예요|에요|였|입니다|고|라고|니까|라도)(?![가-힣])/g,
   resolve(ctx) {
     const [, prev = '', tail = ''] = ctx.match
     if (!hasL(prev) || prev === '별') return null
