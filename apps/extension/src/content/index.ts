@@ -1,5 +1,5 @@
 import { check, mergeDiagnostics, type Diagnostic } from '@gochim/core'
-import { toEditable, type EditableTarget } from './editable.js'
+import { offsetOf, toEditable, type EditableTarget } from './editable.js'
 import { createPopover } from './popover.js'
 import { createMorphClient, type MorphClient } from './morph-client.js'
 import { createUnderlineLayer, type UnderlineLayer } from './underline.js'
@@ -113,7 +113,12 @@ function caretOf(target: EditableTarget): number {
     const field = target.element as HTMLTextAreaElement | HTMLInputElement
     return field.selectionStart ?? 0
   }
-  return window.getSelection()?.anchorOffset ?? 0
+  // anchorOffset은 그 텍스트 노드 안에서의 위치다. 전체 기준으로 환산해야
+  // 긴 글에서 커서 주변을 제대로 잘라낼 수 있다.
+  const selection = window.getSelection()
+  const anchor = selection?.anchorNode
+  if (!anchor || !target.element.contains(anchor)) return 0
+  return offsetOf(target.element, anchor, selection.anchorOffset)
 }
 
 function runCheck(): void {

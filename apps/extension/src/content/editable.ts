@@ -75,6 +75,28 @@ function richTarget(element: HTMLElement): EditableTarget {
 }
 
 /**
+ * DOM 위치를 글자 오프셋으로 옮긴다. `rangeFor`의 반대 방향이다.
+ *
+ * `Selection.anchorOffset`은 **그 텍스트 노드 안에서의** 위치라 문서 전체 기준이 아니다.
+ * 긴 글에서 커서 주변만 잘라 검사하려면 전체 기준 위치가 필요하다.
+ */
+export function offsetOf(root: HTMLElement, node: Node, offsetInNode: number): number {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT)
+  let offset = 0
+  let current = walker.nextNode()
+  while (current) {
+    if (current === node) return offset + offsetInNode
+    if (current.nodeType === Node.ELEMENT_NODE) {
+      if ((current as Element).tagName === 'BR') offset += 1
+    } else {
+      offset += current.textContent?.length ?? 0
+    }
+    current = walker.nextNode()
+  }
+  return offset
+}
+
+/**
  * 글자 오프셋을 DOM Range로 옮긴다.
  *
  * `innerText`는 줄바꿈을 만들어 내므로 텍스트 노드를 이어 붙인 것과 길이가 어긋날 수 있다.
