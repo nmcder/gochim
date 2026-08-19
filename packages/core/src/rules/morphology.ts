@@ -39,6 +39,34 @@ export const dueumYul = defineRule({
   counterExamples: ['환율이 크게 올랐다.', '출산율 감소가 문제다.', '비율을 계산해 보자.'],
 })
 
+/** 두음법칙 반대 방향 — 모음이나 ㄴ 받침 뒤인데 '률'로 적은 자리. */
+export const dueumRyul = defineRule({
+  id: 'dueum-ryul',
+  category: 'spelling',
+  confidence: 0.95,
+  pattern: /([가-힣])률(?=[이가은는을를도만의로과와]|[\s.,!?)\]]|$)/g,
+  resolve(ctx) {
+    const prev = ctx.match[1] ?? ''
+    const tail = finalOf(prev)
+    // 받침이 없거나 ㄴ이면 '율'이라야 한다 — 비율, 환율, 참여율.
+    if (tail !== '' && tail !== 'ㄴ') return null
+    return {
+      suggestions: ['율'],
+      offset: 1,
+      length: 1,
+      message: "모음이나 'ㄴ' 받침 뒤에서는 '율'로 적습니다.",
+      explain:
+        "한자 '率'은 모음이나 'ㄴ' 받침 뒤에서 '율'로 적습니다(비율, 환율, 참여율). 그 밖에는 '률'입니다(경쟁률, 합격률).",
+      refs: ['한글 맞춤법 제11항 [붙임 1]'],
+    }
+  },
+  examples: [
+    { wrong: '설문 조사 참여률이 90%를 넘었습니다.', right: '설문 조사 참여율이 90%를 넘었습니다.' },
+    { wrong: '올해 이자률이 크게 올랐다.', right: '올해 이자율이 크게 올랐다.' },
+  ],
+  counterExamples: ['이번 채용은 경쟁률이 높았다.', '합격률을 계산해 보자.'],
+})
+
 /** 두음법칙 — 어두의 '년'은 '연'으로 적는다. 수 뒤에 오는 의존명사 '년'은 그대로. */
 export const dueumYeon = defineRule({
   id: 'dueum-yeon',
@@ -131,4 +159,4 @@ export const roseoQualification = defineRule({
   counterExamples: ['대화로써 문제를 해결했다.', '학생으로서 할 일을 했다.'],
 })
 
-export const morphologyRules: Rule[] = [dueumYul, dueumYeon, myeongsahyeongEum, eumeuroMeuro, roseoQualification]
+export const morphologyRules: Rule[] = [dueumYul, dueumRyul, dueumYeon, myeongsahyeongEum, eumeuroMeuro, roseoQualification]

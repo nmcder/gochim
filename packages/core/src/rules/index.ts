@@ -4,6 +4,8 @@ import { attachedRules } from './attached.js'
 import { doeDwae, doeSentenceFinal, dwaeJiAnh } from './doe.js'
 import { endingRules } from './endings.js'
 import { confusable, lexicon } from './lexicon.js'
+import { formalRules } from './formal.js'
+import { honorificRules } from './honorific.js'
 import { loanwordRules } from './loanword.js'
 import { redundancyRules } from './redundancy.js'
 import { morphologyRules } from './morphology.js'
@@ -14,6 +16,8 @@ export * from './attached.js'
 export * from './doe.js'
 export * from './endings.js'
 export * from './lexicon.js'
+export * from './formal.js'
+export * from './honorific.js'
 export * from './loanword.js'
 export * from './redundancy.js'
 export * from './morphology.js'
@@ -42,5 +46,7 @@ export const allRules: Rule[] = [
   ...morphologyRules,
   ...loanwordRules,
   ...redundancyRules,
+  ...honorificRules,
+  ...formalRules,
   ...endingRules,
 ]
