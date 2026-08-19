@@ -63,6 +63,11 @@
       </div>
     </section>
 
+    <script>
+      // 확장 밖에서 도는 페이지라 chrome.* API가 없다. 워커 위치와 설정을 직접 주입한다.
+      window.__gochimWorkerUrl = new URL('../dist/garu/morph-worker.js', location.href).href
+      window.__gochimSettings = { morph: true }
+    </script>
     <script src="../dist/content.js"></script>
   </body>
 </html>

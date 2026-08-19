@@ -16,6 +16,13 @@ export declare function ignoreKey(d: Pick<Diagnostic, 'ruleId' | 'text'>): strin
  */
 export declare function check(text: string, options?: CheckOptions, defaultRules?: readonly Rule[], defaultMorphRules?: readonly MorphRule[]): Diagnostic[];
 /**
+ * 서로 다른 곳에서 나온 진단들을 하나로 합친다.
+ *
+ * 확장은 1층을 즉시 돌려 밑줄을 먼저 긋고, 형태소 층 결과는 Worker에서 조금 늦게 받는다.
+ * 두 목록을 그냥 이으면 같은 자리에 밑줄이 두 번 그어지므로, `check`와 같은 규칙으로 정리한다.
+ */
+export declare function mergeDiagnostics(...lists: readonly (readonly Diagnostic[])[]): Diagnostic[];
+/**
  * 진단을 원문에 적용한다.
  *
  * @param pick 어떤 제안을 쓸지 고른다. 기본은 첫 번째(가장 유력한) 제안.

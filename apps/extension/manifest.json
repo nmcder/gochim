@@ -33,7 +33,7 @@
   "permissions": ["storage"],
   "web_accessible_resources": [
     {
-      "resources": ["assets/*"],
+      "resources": ["garu/*"],
       "matches": ["http://*/*", "https://*/*"]
     }
   ]

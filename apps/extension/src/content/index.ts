@@ -1,6 +1,7 @@
-import { check, type Diagnostic } from '@gochim/core'
+import { check, mergeDiagnostics, type Diagnostic } from '@gochim/core'
 import { toEditable, type EditableTarget } from './editable.js'
 import { createPopover } from './popover.js'
+import { createMorphClient, type MorphClient } from './morph-client.js'
 import { createUnderlineLayer, type UnderlineLayer } from './underline.js'
 import { loadSettings, onSettingsChanged, type Settings } from '../shared/settings.js'
 import { openIgnoreStore, type IgnoreStore } from '@gochim/store'
@@ -25,8 +26,53 @@ let ignoreStore: IgnoreStore | null = null
 interface Session {
   target: EditableTarget
   layer: UnderlineLayer
+  /** 문자열 규칙(1층) 결과. 즉시 나온다. */
+  base: Diagnostic[]
+  /** 형태소 층(3층) 결과. 워커에서 조금 늦게 도착한다. */
+  morph: Diagnostic[]
+  /** 화면에 그려진 것 — 위 둘을 합친 결과. */
   diagnostics: Diagnostic[]
   timer: number
+}
+
+/**
+ * 형태소 워커. **켠 사람에게만, 처음 필요한 순간에** 만든다.
+ * 확장이 설치돼 있다는 이유만으로 모든 탭이 1.6MB를 지고 시작하지는 않는다.
+ */
+let morphClient: MorphClient | null = null
+
+function workerUrl(): string | null {
+  const override = (globalThis as { __gochimWorkerUrl?: string }).__gochimWorkerUrl
+  if (override) return override
+  if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) return chrome.runtime.getURL('garu/morph-worker.js')
+  return null
+}
+
+function ensureMorphClient(): MorphClient | null {
+  if (morphClient) return morphClient
+  const url = workerUrl()
+  if (!url) return null
+  morphClient = createMorphClient({
+    workerUrl: url,
+    onResult(diagnostics) {
+      if (!session) return
+      session.morph = diagnostics
+      paint()
+    },
+    onError() {
+      // 분석기를 못 불러와도 1층은 그대로 돈다. 조용히 끈다.
+      morphClient?.terminate()
+      morphClient = null
+    },
+  })
+  return morphClient
+}
+
+/** 두 층의 결과를 합쳐 다시 그린다. 같은 자리에 밑줄이 두 번 그어지지 않도록 엔진 규칙으로 정리한다. */
+function paint(): void {
+  if (!session) return
+  session.diagnostics = session.morph.length > 0 ? mergeDiagnostics(session.base, session.morph) : session.base
+  session.layer.render(session.diagnostics)
 }
 
 let session: Session | null = null
@@ -82,8 +128,13 @@ function runCheck(): void {
     ...(settings.categories.length > 0 ? { categories: settings.categories } : {}),
   })
 
-  session.diagnostics = offset === 0 ? found : found.map((d) => ({ ...d, start: d.start + offset, end: d.end + offset }))
-  session.layer.render(session.diagnostics)
+  const shifted = offset === 0 ? found : found.map((d) => ({ ...d, start: d.start + offset, end: d.end + offset }))
+  session.base = shifted
+  // 글이 바뀌었으니 이전 형태소 결과는 위치가 어긋난다. 새 결과가 올 때까지 비워 둔다.
+  session.morph = []
+  paint()
+
+  if (settings.morph) ensureMorphClient()?.request(text, [...ignoreStore.keys()])
 }
 
 function scheduleCheck(delay = DEBOUNCE_MS): void {
@@ -103,7 +154,7 @@ function detach(): void {
 function attach(target: EditableTarget): void {
   if (session?.target.element === target.element) return
   detach()
-  session = { target, layer: createUnderlineLayer(target), diagnostics: [], timer: 0 }
+  session = { target, layer: createUnderlineLayer(target), base: [], morph: [], diagnostics: [], timer: 0 }
   scheduleCheck(0)
 }
 

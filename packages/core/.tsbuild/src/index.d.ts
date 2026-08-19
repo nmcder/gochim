@@ -15,7 +15,7 @@
  * ```
  */
 import type { CheckOptions, Diagnostic } from './types.js';
-export { applyFixes, ignoreKey } from './engine.js';
+export { applyFixes, ignoreKey, mergeDiagnostics } from './engine.js';
 export { protectedRanges } from './protect.js';
 export * from './hangul.js';
 export { allRules } from './rules/index.js';

@@ -17,7 +17,7 @@
 import { applyFixes, check as runCheck } from './engine.js';
 import { allMorphRules } from './morph/rules.js';
 import { allRules } from './rules/index.js';
-export { applyFixes, ignoreKey } from './engine.js';
+export { applyFixes, ignoreKey, mergeDiagnostics } from './engine.js';
 export { protectedRanges } from './protect.js';
 export * from './hangul.js';
 export { allRules } from './rules/index.js';

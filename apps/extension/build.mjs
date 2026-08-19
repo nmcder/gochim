@@ -44,6 +44,12 @@ const targets = [
   { entryPoints: [resolve(ROOT, 'src/background.ts')], outfile: resolve(OUT, 'background.js'), format: 'esm' },
   { entryPoints: [resolve(ROOT, 'src/options/index.ts')], outfile: resolve(OUT, 'options.js'), format: 'esm' },
   { entryPoints: [resolve(ROOT, 'src/popup/index.ts')], outfile: resolve(OUT, 'popup.js'), format: 'esm' },
+  // 형태소 워커는 garu/ 안에 둔다. WASM과 모델을 바로 옆에 놓기 위해서다.
+  {
+    entryPoints: [resolve(ROOT, 'src/worker/morph-worker.ts')],
+    outfile: resolve(OUT, 'garu/morph-worker.js'),
+    format: 'esm',
+  },
 ]
 
 function copyStatic() {
@@ -51,15 +57,24 @@ function copyStatic() {
   cpSync(resolve(ROOT, 'public'), OUT, { recursive: true })
   cpSync(resolve(ROOT, 'manifest.json'), resolve(OUT, 'manifest.json'))
   cpSync(resolve(ROOT, 'src/content/content.css'), resolve(OUT, 'content.css'))
+
+  // garu-ko의 WASM과 모델을 워커 옆으로 복제한다.
+  // wasm-bindgen 글루가 자기 옆에서 .wasm을 찾고, 워커는 모델 URL을 명시적으로 넘긴다.
+  const garu = resolve(REPO, 'node_modules/garu-ko')
+  mkdirSync(resolve(OUT, 'garu'), { recursive: true })
+  cpSync(resolve(garu, 'pkg/garu_wasm_bg.wasm'), resolve(OUT, 'garu/garu_wasm_bg.wasm'))
+  cpSync(resolve(garu, 'models/base.gmdl'), resolve(OUT, 'garu/base.gmdl'))
 }
 
 function report() {
   const manifest = JSON.parse(readFileSync(resolve(OUT, 'manifest.json'), 'utf8'))
-  const files = ['content.js', 'background.js', 'options.js', 'popup.js', 'content.css']
+  const files = ['content.js', 'background.js', 'options.js', 'popup.js', 'content.css', 'garu/morph-worker.js']
   const total = files.reduce((sum, file) => sum + statSync(resolve(OUT, file)).size, 0)
   console.log(`\n고침 확장 v${manifest.version}`)
   for (const file of files) console.log(`  ${file.padEnd(16)} ${(statSync(resolve(OUT, file)).size / 1024).toFixed(1)} kB`)
   console.log(`  ${'합계'.padEnd(15)} ${(total / 1024).toFixed(1)} kB`)
+  const assets = ['garu/garu_wasm_bg.wasm', 'garu/base.gmdl']
+  for (const file of assets) console.log(`  ${file.padEnd(16)} ${(statSync(resolve(OUT, file)).size / 1024).toFixed(0)} kB  (켠 사람만 내려받음)`)
   console.log(`  권한             ${manifest.permissions.join(', ')} (네트워크 권한 없음)`)
   console.log(`\n크롬에서 불러오기: chrome://extensions → 개발자 모드 → '압축해제된 확장 프로그램을 로드' → ${OUT}`)
 }

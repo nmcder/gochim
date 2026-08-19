@@ -14,6 +14,7 @@ const CATEGORY_LABELS: Record<Category, string> = {
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T
 
 const enabled = $<HTMLInputElement>('enabled')
+const morph = $<HTMLInputElement>('morph')
 const confidence = $<HTMLInputElement>('confidence')
 const confidenceValue = $('confidence-value')
 const categoryBox = $('categories')
@@ -30,6 +31,11 @@ $('meta').textContent = `규칙 ${allRules.length}개 · 엔진 @gochim/core v${
 
 enabled.addEventListener('change', async () => {
   settings = await saveSettings({ enabled: enabled.checked })
+})
+
+morph.checked = settings.morph
+morph.addEventListener('change', async () => {
+  settings = await saveSettings({ morph: morph.checked })
 })
 
 confidence.addEventListener('input', () => {
