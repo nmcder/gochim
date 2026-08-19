@@ -21,3 +21,6 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# 손으로 만든 임시 검증판. 밑줄로 시작하면 커밋하지 않는다.
+packages/*/test/_*.test.ts
