@@ -3,6 +3,12 @@ import { attachedRules } from './attached.js';
 import { doeDwae, doeSentenceFinal, dwaeJiAnh } from './doe.js';
 import { endingRules } from './endings.js';
 import { confusable, lexicon } from './lexicon.js';
+import { confusablePairRules } from './confusable-pairs.js';
+import { formalRules } from './formal.js';
+import { hanjaRules } from './hanja.js';
+import { honorificRules } from './honorific.js';
+import { loanwordRules } from './loanword.js';
+import { redundancyRules } from './redundancy.js';
 import { morphologyRules } from './morphology.js';
 import { spacingRules } from './spacing.js';
 export * from './an.js';
@@ -10,6 +16,12 @@ export * from './attached.js';
 export * from './doe.js';
 export * from './endings.js';
 export * from './lexicon.js';
+export * from './confusable-pairs.js';
+export * from './formal.js';
+export * from './hanja.js';
+export * from './honorific.js';
+export * from './loanword.js';
+export * from './redundancy.js';
 export * from './morphology.js';
 export * from './spacing.js';
 export { defineLexicon, defineRule } from './define.js';
@@ -32,6 +44,12 @@ export const allRules = [
     ...spacingRules,
     ...attachedRules,
     ...morphologyRules,
+    ...loanwordRules,
+    ...redundancyRules,
+    ...honorificRules,
+    ...formalRules,
+    ...hanjaRules,
+    ...confusablePairRules,
     ...endingRules,
 ];
 //# sourceMappingURL=index.js.map

@@ -8,6 +8,8 @@ import type { Rule } from '../types.js';
  */
 /** 두음법칙 — 모음이나 ㄴ 받침 뒤에서는 '열·율', 그 밖에는 '렬·률'. */
 export declare const dueumYul: Rule;
+/** 두음법칙 반대 방향 — 모음이나 ㄴ 받침 뒤인데 '률'로 적은 자리. */
+export declare const dueumRyul: Rule;
 /** 두음법칙 — 어두의 '년'은 '연'으로 적는다. 수 뒤에 오는 의존명사 '년'은 그대로. */
 export declare const dueumYeon: Rule;
 /** `-슴`은 없다. 명사형 어미는 `-(으)ㅁ`이라 `했음`이다. */

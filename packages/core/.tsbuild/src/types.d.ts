@@ -7,7 +7,9 @@ export type Category =
 /** 둘 다 실재하지만 뜻이 다른 말의 혼동. 결재 ↔ 결제 */
  | 'confusable'
 /** 어미·조사 표기. 할께요 → 할게요 */
- | 'ending';
+ | 'ending'
+/** 겹말·군더더기. 다시 재발 → 재발. 틀린 건 아니라 경고로만 알린다. */
+ | 'redundancy';
 export type Severity = 'error' | 'warning';
 /** 규칙이 스스로 증명하는 예시. 문서 생성과 회귀 테스트에 함께 쓰인다. */
 export interface Example {

@@ -101,4 +101,53 @@ export function josa(word, pair) {
     const [withBatchim, withoutBatchim] = pair.split('/');
     return endsWithFinal(word) ? (withBatchim ?? '') : (withoutBatchim ?? '');
 }
+/**
+ * 앞말에 따라 형태가 바뀌는 조사 쌍. 앞이 받침 있을 때 / 없을 때 순서다.
+ *
+ * `으로/로`만 예외가 하나 있다 — ㄹ받침 뒤에서는 받침이 있어도 `로`를 쓴다
+ * ('서울로', '연필로'). 그래서 단순한 받침 유무 판정으로는 부족하다.
+ */
+const JOSA_PAIRS = [
+    ['은', '는'],
+    ['이', '가'],
+    ['을', '를'],
+    ['과', '와'],
+    ['으로', '로'],
+    ['이랑', '랑'],
+    ['이나', '나'],
+    ['이라', '라'],
+    ['이야', '야'],
+    ['이에요', '예요'],
+];
+/** 이 조사 쌍에서 `word` 뒤에 붙어야 하는 형태. */
+export function josaOf(word, pair) {
+    const [withBatchim, withoutBatchim] = pair;
+    if (withBatchim === '으로') {
+        // ㄹ받침은 받침이 없는 것처럼 '로'를 취한다.
+        const last = [...word].at(-1);
+        return endsWithFinal(word) && finalOf(last ?? '') !== 'ㄹ' ? withBatchim : withoutBatchim;
+    }
+    return endsWithFinal(word) ? withBatchim : withoutBatchim;
+}
+/**
+ * 표기를 고치면서 받침이 바뀔 때, 뒤따르는 조사도 함께 고친다.
+ *
+ * `케잌을 → 케이크를`처럼 받침이 사라지거나 생기면 조사 형태도 달라진다.
+ * 이걸 놓치면 `케이크을`이라는 새 오류를 만들어 낸다.
+ *
+ * @param rest 고칠 말 바로 뒤에 이어지는 원문
+ * @returns 조사까지 함께 바꿔야 하면 그 정보를, 바꿀 필요가 없으면 null
+ */
+export function adaptJosa(from, to, rest) {
+    for (const pair of JOSA_PAIRS) {
+        const current = josaOf(from, pair);
+        if (!rest.startsWith(current))
+            continue;
+        const adapted = josaOf(to, pair);
+        if (adapted === current)
+            return null;
+        return { consumed: current.length, josa: adapted };
+    }
+    return null;
+}
 //# sourceMappingURL=hangul.js.map

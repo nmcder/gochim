@@ -48,4 +48,19 @@ export declare function endsWithFinal(word: string): boolean;
  * `josa('학교', '은/는')` → `는`
  */
 export declare function josa(word: string, pair: string): string;
+/** 이 조사 쌍에서 `word` 뒤에 붙어야 하는 형태. */
+export declare function josaOf(word: string, pair: readonly [string, string]): string;
+/**
+ * 표기를 고치면서 받침이 바뀔 때, 뒤따르는 조사도 함께 고친다.
+ *
+ * `케잌을 → 케이크를`처럼 받침이 사라지거나 생기면 조사 형태도 달라진다.
+ * 이걸 놓치면 `케이크을`이라는 새 오류를 만들어 낸다.
+ *
+ * @param rest 고칠 말 바로 뒤에 이어지는 원문
+ * @returns 조사까지 함께 바꿔야 하면 그 정보를, 바꿀 필요가 없으면 null
+ */
+export declare function adaptJosa(from: string, to: string, rest: string): {
+    consumed: number;
+    josa: string;
+} | null;
 //# sourceMappingURL=hangul.d.ts.map
