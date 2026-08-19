@@ -12,7 +12,7 @@
  */
 
 import { context, build as esbuild } from 'esbuild'
-import { cpSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -66,6 +66,46 @@ function copyStatic() {
   cpSync(resolve(garu, 'models/base.gmdl'), resolve(OUT, 'garu/base.gmdl'))
 }
 
+/**
+ * 크롬이 실제로 이 확장을 불러올 수 있는지 검사한다.
+ *
+ * 매니페스트가 가리키는 파일이 하나라도 없으면 크롬은 확장을 통째로 거부한다.
+ * 빌드는 성공했는데 설치가 안 되는 상태가 가장 나쁘므로, 여기서 먼저 깨뜨린다.
+ * (`default_locale`을 적어 두고 `_locales`를 만들지 않아 실제로 이 사고가 났다)
+ */
+function validateManifest() {
+  const manifest = JSON.parse(readFileSync(resolve(OUT, 'manifest.json'), 'utf8'))
+  const problems = []
+  const need = (path, why) => {
+    if (!existsSync(resolve(OUT, path))) problems.push(`${why}: ${path}`)
+  }
+
+  if (manifest.default_locale) {
+    need(`_locales/${manifest.default_locale}/messages.json`, 'default_locale을 적었으면 메시지 파일이 있어야 한다')
+  }
+  for (const [size, path] of Object.entries(manifest.icons ?? {})) need(path, `icons.${size}`)
+  if (manifest.background?.service_worker) need(manifest.background.service_worker, 'background.service_worker')
+  for (const [i, cs] of (manifest.content_scripts ?? []).entries()) {
+    for (const file of cs.js ?? []) need(file, `content_scripts[${i}].js`)
+    for (const file of cs.css ?? []) need(file, `content_scripts[${i}].css`)
+  }
+  if (manifest.options_ui?.page) need(manifest.options_ui.page, 'options_ui.page')
+  if (manifest.action?.default_popup) need(manifest.action.default_popup, 'action.default_popup')
+  for (const [size, path] of Object.entries(manifest.action?.default_icon ?? {})) need(path, `action.default_icon.${size}`)
+  for (const entry of manifest.web_accessible_resources ?? []) {
+    for (const path of entry.resources ?? []) {
+      // 와일드카드는 검사할 수 없다.
+      if (!path.includes('*')) need(path, 'web_accessible_resources')
+    }
+  }
+
+  if (problems.length > 0) {
+    console.error('\n매니페스트가 없는 파일을 가리키고 있습니다 — 크롬이 이 확장을 거부합니다:')
+    for (const problem of problems) console.error(`  - ${problem}`)
+    process.exit(1)
+  }
+}
+
 function report() {
   const manifest = JSON.parse(readFileSync(resolve(OUT, 'manifest.json'), 'utf8'))
   const files = ['content.js', 'background.js', 'options.js', 'popup.js', 'content.css', 'garu/morph-worker.js']
@@ -79,7 +119,8 @@ function report() {
   console.log(`\n크롬에서 불러오기: chrome://extensions → 개발자 모드 → '압축해제된 확장 프로그램을 로드' → ${OUT}`)
 }
 
-rmSync(OUT, { recursive: true, force: true })
+// 파일 탐색기나 개발용 서버가 dist를 잡고 있으면 윈도에서 EPERM이 난다. 몇 번 다시 시도한다.
+rmSync(OUT, { recursive: true, force: true, maxRetries: 10, retryDelay: 150 })
 copyStatic()
 
 if (watch) {
@@ -90,5 +131,6 @@ if (watch) {
   console.log('감시 중… (Ctrl+C로 종료)')
 } else {
   await Promise.all(targets.map((target) => esbuild({ ...common, ...target })))
+  validateManifest()
   report()
 }
