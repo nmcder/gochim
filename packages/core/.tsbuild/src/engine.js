@@ -141,7 +141,12 @@ export function check(text, options = {}, defaultRules = [], defaultMorphRules =
                     continue;
                 let findings;
                 try {
-                    findings = rule.run({ text, words });
+                    findings = rule.run({
+                        text,
+                        words,
+                        analyze: (probe) => options.analyzer.analyze(probe),
+                        ...(options.analyzer.score ? { score: (probe) => options.analyzer.score(probe) } : {}),
+                    });
                 }
                 catch {
                     continue;

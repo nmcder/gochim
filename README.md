@@ -90,7 +90,7 @@ docs/decisions/    설계 기록(ADR)
 | --- | --- | --- |
 | 1층 · 규칙 사전 | 문자열 패턴 + 받침 계산 | ✅ |
 | 3층 · 품사 기반 띄어쓰기 | 형태소 태그(NNB·J*) | ✅ |
-| 2층 · 형태소 이상 탐지 | 과분할·점수 기반 의심 구간 | 다음 |
+| 2층 · 형태소 이상 탐지 | 점수 기반 오타 탐지 | [기각](docs/decisions/0006-rejected-score-based-typo-detection.md) |
 
 **코어는 형태소 분석기를 모른다.** `check(text, { analyzer })`로 주입받을 뿐이다.
 그래서 코어만 쓰면 18.5 kB로 끝나고, 정확도가 더 필요할 때만 1.6 MB를 얹는다.
@@ -112,7 +112,7 @@ npm run probe:sync              # garu-ko 실측 하네스 에셋 동기화
 
 - [x] **Phase 0** — 워크스페이스, 골든 테스트셋, 1층 규칙 엔진, 웹 데모
 - [x] **Phase 1** — 형태소 층(3층), 무시 사전(IndexedDB), 크롬 확장 MV3 밑줄 오버레이
-- [ ] **Phase 2** — 2층(형태소 이상 탐지), 확장에 형태소 층 연결(Worker 분리), npm 배포, GitHub Releases
+- [ ] **Phase 2** — 확장에 형태소 층 연결(Worker 분리), 골든셋 확장, npm 배포, GitHub Releases
 
 ## 설계 기록
 
@@ -121,6 +121,7 @@ npm run probe:sync              # garu-ko 실측 하네스 에셋 동기화
 3. [판정은 3층, 저장소는 둘로](docs/decisions/0003-three-layers-and-repo-split.md)
 4. [골든 테스트셋을 코드보다 먼저 만든다](docs/decisions/0004-golden-set-first.md)
 5. [확장은 호스트 DOM을 건드리지 않는다](docs/decisions/0005-extension-never-touches-host-dom.md)
+6. [점수 기반 오타 탐지를 시도하고 기각했다](docs/decisions/0006-rejected-score-based-typo-detection.md) — 측정값과 함께
 
 ## 라이선스
 

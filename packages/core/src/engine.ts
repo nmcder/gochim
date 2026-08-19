@@ -177,7 +177,12 @@ export function check(
         if (categories && !categories.has(rule.category)) continue
         let findings
         try {
-          findings = rule.run({ text, words })
+          findings = rule.run({
+            text,
+            words,
+            analyze: (probe) => options.analyzer!.analyze(probe),
+            ...(options.analyzer!.score ? { score: (probe: string) => options.analyzer!.score!(probe) } : {}),
+          })
         } catch {
           continue
         }

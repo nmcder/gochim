@@ -117,6 +117,14 @@ export interface Word {
  */
 export interface Analyzer {
   analyze(text: string): readonly Morpheme[]
+  /**
+   * 분석 비용. **낮을수록 그럴듯한 말**이다.
+   *
+   * 절대값은 쓸 수 없다 — 사람 이름(44.6)과 오타(44.8)의 범위가 겹친다.
+   * 대신 후보 표기와의 **차이**는 강한 신호다. 2층 오타 탐지가 이걸 쓴다.
+   * 구현하지 않아도 되며, 없으면 2층 규칙이 그냥 돌지 않는다.
+   */
+  score?(text: string): number
 }
 
 /** 형태소 정보를 보고 판정하는 규칙. 정규식 규칙과 달리 문장 전체의 분석 결과를 본다. */
@@ -133,6 +141,10 @@ export interface MorphRule {
 export interface MorphRuleContext {
   text: string
   words: readonly Word[]
+  /** 후보 표기를 즉석에서 분석해 본다. 오타 탐지처럼 "이렇게 고치면 더 그럴듯한가"를 묻는 규칙이 쓴다. */
+  analyze(text: string): readonly Morpheme[]
+  /** 분석 비용. 분석기가 제공하지 않으면 undefined. */
+  score?: (text: string) => number
 }
 
 export interface MorphFinding extends Finding {

@@ -47,6 +47,12 @@ export async function createAnalyzer(options: CreateAnalyzerOptions = {}): Promi
       if (!best) return []
       return best.tokens.map((t) => ({ text: t.text, pos: t.pos, start: t.start, end: t.end }))
     },
+    score(text: string): number {
+      if (!text) return 0
+      const result = garu.analyze(text)
+      const best = Array.isArray(result) ? result[0] : result
+      return best?.score ?? 0
+    },
     destroy() {
       garu.destroy()
     },
