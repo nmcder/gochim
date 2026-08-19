@@ -40,6 +40,13 @@ export interface LexEntry {
   right: string
   /** 왜 틀렸는지. 사용자에게 그대로 보여준다. */
   explain?: string
+  /**
+   * 한 줄 요약을 갈아 끼운다.
+   *
+   * 기본 문구는 "X는 Y의 잘못된 표기입니다"인데, 경고 심각도에서는 이게 사실이 아니다.
+   * 규정이 허용하는 표기에 "잘못"이라고 적으면 안 된다.
+   */
+  message?: string
   refs?: string[]
   confidence?: number
   severity?: Severity
@@ -110,7 +117,7 @@ export function defineLexicon(spec: LexiconSpec): Rule {
       return {
         suggestions: [entry.right],
         subId: entry.wrong,
-        message: `'${shown.wrong}'${josa(shown.wrong, '은/는')} '${shown.right}'의 잘못된 표기입니다.`,
+        message: entry.message ?? `'${shown.wrong}'${josa(shown.wrong, '은/는')} '${shown.right}'의 잘못된 표기입니다.`,
         ...(entry.explain ? { explain: entry.explain } : {}),
         ...(entry.refs ? { refs: entry.refs } : {}),
         ...(entry.confidence != null ? { confidence: entry.confidence } : {}),

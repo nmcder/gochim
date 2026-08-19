@@ -36,6 +36,7 @@ const pick = (key) => {
 }
 
 const falsePositives = []
+const warnings = []
 const misses = []
 let tp = 0
 
@@ -65,7 +66,12 @@ for (const c of golden.cases) {
 
 const cleanSentences = [...new Set(golden.cases.map((c) => c.right)), ...golden.negatives.map((n) => n.text)]
 for (const sentence of cleanSentences) {
-  for (const d of check(sentence)) falsePositives.push({ sentence, rule: d.ruleId, text: d.text, clean: true })
+  // 경고는 "이게 틀렸다"가 아니라 "원칙은 이쪽이다"라는 안내다.
+    // 오탐으로 세면 규정이 허용하는 표기를 알려 주는 일 자체가 불가능해진다.
+    for (const d of check(sentence)) {
+      if (d.severity === 'warning') { warnings.push({ sentence, rule: d.ruleId, text: d.text }); continue }
+      falsePositives.push({ sentence, rule: d.ruleId, text: d.text, clean: true })
+    }
 }
 
 const precision = tp / Math.max(1, tp + falsePositives.length)
@@ -77,7 +83,7 @@ console.log(
   `표본  오류 문장 ${golden.cases.length} · 오류 구간 ${golden.counts.spans} · ` +
     `정상 문장 ${cleanSentences.length} (정답 ${golden.counts.rightSentences} + 함정 ${golden.negatives.length})`,
 )
-console.log(`정밀도 ${precision.toFixed(4)}   재현율 ${recall.toFixed(4)}   오탐 ${falsePositives.length}건`)
+console.log(`정밀도 ${precision.toFixed(4)}   재현율 ${recall.toFixed(4)}   오탐 ${falsePositives.length}건` + (warnings.length ? `   경고 ${warnings.length}건` : ''))
 console.log('='.repeat(64))
 
 console.log('\n분류별')

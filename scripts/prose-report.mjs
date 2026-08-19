@@ -50,6 +50,7 @@ const byCategory = new Map()
 let total = 0
 let hit = 0
 let extra = 0
+let warned = 0
 const missed = []
 const extras = []
 
@@ -91,6 +92,8 @@ for (const para of corpus.paragraphs) {
 
   found.forEach((d, i) => {
     if (used.has(i)) return
+    // 경고는 정답에 없는 게 당연하다 — 규정이 허용하는 표기를 알려 주는 것뿐이다.
+    if (d.severity === 'warning') { warned += 1; return }
     extra += 1
     extras.push({ para: para.index + 1, ruleId: d.ruleId, text: d.text, suggestion: d.suggestions[0] })
   })
@@ -106,7 +109,10 @@ for (const para of corpus.paragraphs) {
 function applyAll(source, diagnostics) {
   let out = source
   let earliest = Number.POSITIVE_INFINITY
-  for (const d of [...diagnostics].sort((a, b) => b.start - a.start)) {
+  // 경고는 빼고 잰다. 정답은 규정이 허용하는 표기를 그대로 두기로 한 판정이라
+  // ('좀더'·'약속시간'·'다음날') 경고까지 적용하면 정답과 어긋나는 게 당연하다.
+  // 확장의 '모두 고치기'는 사용자가 직접 누르는 것이라 경고까지 고친다 — 여기와 다르다.
+  for (const d of [...diagnostics].filter((x) => x.severity !== 'warning').sort((a, b) => b.start - a.start)) {
     if (d.suggestions[0] == null) continue
     if (d.end > earliest) continue // 겹치는 진단은 뒤엣것만 쓴다 — 확장과 같은 규칙
     out = out.slice(0, d.start) + d.suggestions[0] + out.slice(d.end)
@@ -145,7 +151,7 @@ console.log()
 console.log(`실문 성적표${useMorph ? ' (형태소 층 포함)' : ' (1층만)'}`)
 console.log('='.repeat(64))
 console.log(`표본  문단 ${corpus.paragraphs.length}개 · ${corpus.paragraphs.reduce((n, p) => n + p.source.length, 0)}자 · 정답 오류 ${total}건`)
-console.log(`검출 ${hit}건 · 재현율 ${(hit / total).toFixed(4)} · 정답에 없는 지적 ${extra}건`)
+console.log(`검출 ${hit}건 · 재현율 ${(hit / total).toFixed(4)} · 정답에 없는 지적 ${extra}건` + (warned ? ` · 원칙 안내(경고) ${warned}건` : ''))
 
 const wantedWords = residue.reduce((n, r) => n + r.wanted, 0)
 const matchedWords = residue.reduce((n, r) => n + r.matched, 0)

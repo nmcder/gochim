@@ -28,6 +28,8 @@ const STYLE = `
   .why { background: rgba(255, 255, 255, 0.06) !important; }
   .btn { background: #2a2a22; color: #f2efe6; border-color: rgba(255, 255, 255, 0.16); }
   .btn--primary { background: #f2efe6; color: #16150f; }
+  .btn--quiet { background: transparent; color: #f2efe6; }
+  .btn--all { background: transparent; color: #f2efe6; border-color: rgba(255, 255, 255, 0.45); }
 }
 .swap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; font-size: 15px; }
 .from { color: #c2402d; text-decoration: line-through; }
@@ -36,15 +38,23 @@ const STYLE = `
 .msg { margin: 0; font-size: 13px; opacity: 0.8; }
 .why { margin: 8px 0 0; padding: 8px 10px; border-radius: 6px; background: rgba(0, 0, 0, 0.04); font-size: 12.5px; opacity: 0.85; }
 .refs { margin-top: 6px; font-size: 11px; opacity: 0.5; }
-.actions { display: flex; gap: 6px; margin-top: 10px; }
+/*
+ * 단추가 셋이면 카드 최대폭(340px)을 넘는다. 줄바꿈을 허용하지 않으면 글자가
+ * 단추 상자 밖으로 흘러나와 옆 단추의 흰 바탕과 겹쳐 읽을 수 없게 된다.
+ * 넘치면 다음 줄로 내린다.
+ */
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .btn {
   appearance: none; font: inherit; font-size: 13px; padding: 5px 11px; border-radius: 7px; cursor: pointer;
-  border: 1px solid rgba(0, 0, 0, 0.14); background: #fff; color: inherit;
+  white-space: nowrap; border: 1px solid rgba(0, 0, 0, 0.14); background: #fff; color: #16150f;
 }
 .btn--primary { background: #16150f; border-color: #16150f; color: #fff; font-weight: 600; }
-.btn--quiet { background: transparent; border-color: transparent; opacity: 0.65; }
-/* 되돌릴 수 있는 일이지만 한 번에 여러 곳을 바꾼다. 주 버튼과 헷갈리지 않게 테두리만 준다. */
-.btn--all { margin-left: auto; font-weight: 600; }
+.btn--quiet { background: transparent; border-color: transparent; color: #16150f; opacity: 0.65; }
+/*
+ * 한 번에 여러 곳을 바꾸므로 주 단추와 구별되어야 한다. 채우지 않고 테두리만 준다.
+ * 색은 물려받지 않고 못 박는다 — 물려받게 두면 호스트나 테마에 따라 흰 글자가 흰 바탕에 얹힌다.
+ */
+.btn--all { font-weight: 600; background: transparent; color: #16150f; border-color: rgba(0, 0, 0, 0.38); }
 `
 
 export interface PopoverActions {

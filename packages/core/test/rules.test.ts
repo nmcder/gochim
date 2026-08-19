@@ -31,15 +31,19 @@ describe('규칙이 선언한 예시', () => {
 describe('규칙 전체를 켠 상태에서의 오탐', () => {
   const counterExamples = allRules.flatMap((r) => r.counterExamples ?? [])
 
-  it.each(counterExamples)('정상 문장을 건드리지 않는다: %s', (sentence) => {
-    expect(check(sentence)).toEqual([])
+  // 경고는 '이건 틀렸다'가 아니라 '원칙은 이쪽이다'라는 안내다(제46·47항이 허용하는 표기 등).
+  // 정상 문장에 떠도 약속을 어기는 게 아니므로 오류 심각도만 0이어야 한다.
+  const errorsOnly = (sentence: string) => check(sentence).filter((d) => d.severity !== 'warning')
+
+  it.each(counterExamples)('정상 문장에 오류 밑줄을 긋지 않는다: %s', (sentence) => {
+    expect(errorsOnly(sentence)).toEqual([])
   })
 
   it('예시의 정답 문장은 어떤 규칙도 잡지 않는다', () => {
     const offenders: string[] = []
     for (const rule of allRules) {
       for (const example of rule.examples) {
-        const diagnostics = check(example.right)
+        const diagnostics = errorsOnly(example.right)
         if (diagnostics.length > 0) {
           offenders.push(`${example.right} ← ${diagnostics.map((d) => d.ruleId).join(', ')}`)
         }
