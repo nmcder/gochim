@@ -5,6 +5,7 @@ import { doeDwae, doeSentenceFinal, dwaeJiAnh } from './doe.js'
 import { endingRules } from './endings.js'
 import { confusable, lexicon } from './lexicon.js'
 import { formalRules } from './formal.js'
+import { hanjaRules } from './hanja.js'
 import { honorificRules } from './honorific.js'
 import { loanwordRules } from './loanword.js'
 import { redundancyRules } from './redundancy.js'
@@ -17,6 +18,7 @@ export * from './doe.js'
 export * from './endings.js'
 export * from './lexicon.js'
 export * from './formal.js'
+export * from './hanja.js'
 export * from './honorific.js'
 export * from './loanword.js'
 export * from './redundancy.js'
@@ -48,5 +50,6 @@ export const allRules: Rule[] = [
   ...redundancyRules,
   ...honorificRules,
   ...formalRules,
+  ...hanjaRules,
   ...endingRules,
 ]
