@@ -18,8 +18,8 @@
     "probe:sync": "node scripts/sync-probe.mjs",
     "golden:build": "node scripts/build-golden.mjs",
     "rules:doc": "npm run build -w @gochim/core && node scripts/rules-doc.mjs",
-    "build:extension": "npm run build -w @gochim/extension",
-    "pack:extension": "npm run build -w @gochim/extension && node apps/extension/scripts/pack.mjs",
+    "build:extension": "npm run build -w @gochim/core && npm run build -w @gochim/morph && npm run build -w @gochim/store && npm run build -w @gochim/extension",
+    "pack:extension": "npm run build:extension && node apps/extension/scripts/pack.mjs",
     "bench": "npm run build -w @gochim/core && npm run build -w @gochim/morph && node scripts/bench.mjs",
     "prose:report": "npm run build -w @gochim/core && node scripts/prose-report.mjs"
   },
