@@ -189,4 +189,53 @@ export const mokjeogeoSpacing = defineRule({
   ],
 })
 
-export const busaRules: Rule[] = [busaWae, busaKkwae, busaDeoIsang, mokjeogeoSpacing]
+/**
+ * 대명사 `뭐` + 동사 `하다`.
+ *
+ * 사전에는 형용사 `뭐하다`(=`뭣하다`, 언짢거나 거북하다)가 따로 올라 있다.
+ * 그래서 `뭐하-`를 통째로 가르면 "말하기가 좀 뭐하다"가 깨진다.
+ *
+ * 두 쓰임을 가르는 것은 **앞말**이다. 형용사 쪽은 앞에 정도 부사(좀·조금·영)나
+ * `-기` 명사형(말하기·거절하기·가기)이 온다. 무엇을 하느냐고 묻는 쪽은 그렇지 않다.
+ *
+ *   내일 뭐하냐고 물어봤다     → 뭐 하냐고   (대명사 + 동사)
+ *   혼자 가기는 뭐하니까       → 그대로      (형용사)
+ *
+ * 뒤 어미도 의문·관형 쪽으로 좁혔다. `뭐하고`는 양쪽에 다 쓰여서 뺐다.
+ */
+const MWO_ADJECTIVE_BEFORE = /(?:좀|조금|영|참|다소|약간|[가-힣]+기(?:가|도|는|를|엔|에|나)?)\s*$/
+
+export const mwoHada = defineRule({
+  id: 'mwo-hada',
+  category: 'spacing',
+  confidence: 0.9,
+  pattern: /(?<![가-힣])뭐하(냐|니|는|세|실|십|자)|(?<![가-힣])뭐할(?=[까래])/g,
+  resolve(ctx) {
+    if (MWO_ADJECTIVE_BEFORE.test(ctx.text.slice(0, ctx.index))) return null
+    return {
+      suggestions: [`뭐 ${ctx.match[0].slice(1)}`],
+      message: "'뭐'는 대명사라 뒤의 용언과 띄어 씁니다.",
+      explain:
+        "무엇을 하느냐고 묻는 '뭐 하다'는 대명사 '뭐'와 동사 '하다'가 이어진 두 낱말입니다. 사전에 오른 '뭐하다'는 '언짢다·거북하다'라는 뜻의 형용사로, '말하기가 좀 뭐하다'처럼 앞에 정도 부사나 '-기' 명사형이 옵니다.",
+      refs: ['한글 맞춤법 제2항'],
+    }
+  },
+  examples: [
+    { wrong: '친구가 갑자기 내일 뭐하냐고 물어봤다.', right: '친구가 갑자기 내일 뭐 하냐고 물어봤다.' },
+    { wrong: '지금 뭐하니?', right: '지금 뭐 하니?' },
+    { wrong: '뭐하는 사람인지 모르겠다.', right: '뭐 하는 사람인지 모르겠다.' },
+    { wrong: '주말에 뭐할까 고민했다.', right: '주말에 뭐 할까 고민했다.' },
+    { wrong: '지금 뭐하세요?', right: '지금 뭐 하세요?' },
+  ],
+  counterExamples: [
+    '내가 말하기는 좀 뭐하다.',
+    '그렇게 말하기도 뭐하고 그냥 넘어갔다.',
+    '혼자 가기는 뭐하니까 같이 가자.',
+    '거절하기가 뭐해서 그냥 갔다.',
+    '좀 뭐한 상황이라 조용히 있었다.',
+    '지금 뭐 하니?',
+    '내일 뭐 할지 정했어?',
+  ],
+})
+
+export const busaRules: Rule[] = [busaWae, busaKkwae, busaDeoIsang, mokjeogeoSpacing, mwoHada]
