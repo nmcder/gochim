@@ -28,7 +28,7 @@
           <h2>검사할 글</h2>
           <dl class="stats">
             <div><dt>글자</dt><dd id="stat-chars">0</dd></div>
-            <div><dt>오류</dt><dd id="stat-issues">0</dd></div>
+            <div><dt>오류</dt><dd id="stat-issues" aria-live="polite">0</dd></div>
             <div><dt>검사</dt><dd id="stat-time">0.0ms</dd></div>
           </dl>
         </div>
@@ -63,7 +63,7 @@
           <button type="button" id="reset-ignored" class="btn btn--quiet btn--sm" hidden>무시 되돌리기</button>
         </div>
         <ol class="findings" id="findings"></ol>
-        <p class="empty" id="empty">글을 입력하면 결과가 여기에 나타납니다.</p>
+        <p class="empty" id="empty" aria-live="polite">글을 입력하면 결과가 여기에 나타납니다.</p>
       </aside>
     </main>
 

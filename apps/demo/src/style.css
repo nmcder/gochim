@@ -338,8 +338,28 @@ mark.hl--warning.is-active {
   border-left: 3px solid var(--error);
   border-radius: 8px;
   padding: 12px 14px;
-  cursor: pointer;
   background: var(--surface);
+}
+
+/* 카드 본문 자체가 버튼이다. 마우스 없이도 결과를 훑을 수 있어야 한다. */
+.finding__main {
+  appearance: none;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.finding__main:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .finding--warning {

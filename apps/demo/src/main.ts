@@ -106,6 +106,11 @@ function renderFindings(): void {
     }`
     item.dataset['index'] = String(index)
 
+    // 카드 본문 자체가 버튼이다 — 마우스 없이도 결과를 훑을 수 있어야 한다.
+    const main = document.createElement('button')
+    main.type = 'button'
+    main.className = 'finding__main'
+
     const { from, to } = wordContext(input.value, d)
     const swap = document.createElement('div')
     swap.className = 'finding__swap'
@@ -113,19 +118,24 @@ function renderFindings(): void {
       `<span class="finding__from">${escapeHtml(from)}</span>` +
       `<span class="finding__arrow">▸</span>` +
       `<span class="finding__to">${escapeHtml(to)}</span>`
-    item.append(swap)
+    main.append(swap)
 
     const message = document.createElement('p')
     message.className = 'finding__msg'
     message.textContent = d.message
-    item.append(message)
+    main.append(message)
 
     if (d.explain) {
       const why = document.createElement('p')
       why.className = 'finding__why'
       why.textContent = d.explain
-      item.append(why)
+      main.append(why)
     }
+
+    // 조사를 붙이면 '어이없는로'처럼 어색해진다. 화면 낭독기에는 조사 없이 읽히는 표현이 낫다.
+    main.setAttribute('aria-label', `수정 제안: ${from} 대신 ${to}. ${d.message}`)
+    main.addEventListener('click', () => select(index, { focusInput: true }))
+    item.append(main)
 
     const meta = document.createElement('div')
     meta.className = 'finding__meta'
@@ -161,7 +171,6 @@ function renderFindings(): void {
     meta.append(actions)
     item.append(meta)
 
-    item.addEventListener('click', () => select(index, { focusInput: true }))
     findingList.append(item)
   })
 }
