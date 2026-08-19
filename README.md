@@ -116,6 +116,18 @@ npm run pack:extension          # 배포용 zip → apps/extension/release/
 npm run probe:sync              # garu-ko 실측 하네스 에셋 동기화
 ```
 
+## 배포
+
+세 패키지 모두 `npm publish --dry-run`을 통과합니다 (core 80.8kB, morph 5.0kB, store 5.8kB).
+
+```bash
+npm run pack:extension   # apps/extension/release/gochim-extension-v0.1.0.zip (1.45MB)
+```
+
+태그를 밀면 GitHub Actions가 검증·빌드·zip을 만들어 릴리스 초안에 붙입니다.
+크롬 웹 스토어 등록은 개발자 약관상 미성년자라 보류하고, 받는 사람은 zip을 풀어
+`chrome://extensions → 압축해제된 확장 프로그램을 로드`로 설치합니다.
+
 ## 로드맵
 
 - [x] **Phase 0** — 워크스페이스, 골든 테스트셋, 1층 규칙 엔진, 웹 데모
