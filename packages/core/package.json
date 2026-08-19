@@ -44,11 +44,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kkwki/gochim.git",
+    "url": "git+https://github.com/nmcder/gochim.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/kkwki/gochim#readme",
+  "homepage": "https://github.com/nmcder/gochim#readme",
   "bugs": {
-    "url": "https://github.com/kkwki/gochim/issues"
+    "url": "https://github.com/nmcder/gochim/issues"
   }
 }

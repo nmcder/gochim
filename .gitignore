@@ -3,6 +3,7 @@ dist/
 release/
 .vite/
 coverage/
+.tsbuild/
 *.tsbuildinfo
 *.log
 

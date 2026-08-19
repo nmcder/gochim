@@ -2,12 +2,12 @@
   "version": 1,
   "builtFrom": [
     {
-      "file": "C:/Users/kkwki/AppData/Local/Temp/claude/c--Users-kkwki-Desktop-gochim/81c24d2b-2440-4bd5-b8cf-0902abc1bc22/tasks/w9933tfc8.output",
+      "file": "w9933tfc8.output",
       "cases": 133,
       "negatives": 165
     },
     {
-      "file": "C:/Users/kkwki/AppData/Local/Temp/claude/c--Users-kkwki-Desktop-gochim/81c24d2b-2440-4bd5-b8cf-0902abc1bc22/tasks/wghzmy0wy.output",
+      "file": "wghzmy0wy.output",
       "cases": 95,
       "negatives": 161
     }
