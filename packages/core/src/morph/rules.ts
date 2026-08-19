@@ -19,6 +19,14 @@ import { morphemeOffset } from './words.js'
 /** 조사 계열 태그. J로 시작하면 전부 조사다. */
 const isJosa = (pos: string) => pos.startsWith('J')
 
+/**
+ * 수를 세는 단위명사. 앞에 수가 없으면 단위로 쓰인 것이 아니다.
+ *
+ * 분석기가 `여명(黎明)`을 `여/XSN + 명/NNB`로 잘못 쪼개는 일이 있다.
+ * 이 목록에 든 말은 바로 앞 형태소가 수(SN·NR·MM)일 때만 띄어쓰기를 제안한다.
+ */
+const UNIT_NNB = new Set(['명', '개', '권', '장', '시', '분', '원', '번', '살', '마리', '그루', '채', '켤레', '벌', '통', '병'])
+
 /** 동사·부사로도 쓰여 분석기가 자주 헷갈리는 말. 붙이면 뜻이 바뀌므로 손대지 않는다. */
 const RISKY_JOSA = new Set(['같이', '만치'])
 
@@ -63,6 +71,11 @@ export const morphNnbSpacing: MorphRule = {
       // 수 + 단위명사는 붙여 쓸 수 있다 — `10년`, `90점`, `3개`. (제43항 다만)
       if (word.morphemes[index - 1]?.pos === 'SN' || /^\d/.test(word.text)) continue
 
+      // 단위명사인데 앞에 수가 없으면 단위로 쓰인 것이 아니다. ('여명'을 '여 명'으로 쪼개는 오분석 방지)
+      const nnb = word.morphemes[index]!.text
+      const previousPos = word.morphemes[index - 1]?.pos ?? ''
+      if (UNIT_NNB.has(nnb) && !['SN', 'NR', 'MM'].includes(previousPos)) continue
+
       const at = morphemeOffset(word, index)
       if (at == null) continue
 
@@ -78,6 +91,7 @@ export const morphNnbSpacing: MorphRule = {
     { wrong: '우리 내일 만날거야?', right: '우리 내일 만날 거야?' },
   ],
   counterExamples: [
+    '이른 새벽 여명 속에서 등교하며 하루를 시작했다.',
     '10년 만에 만난 친구가 하나도 안 변했더라.',
     '장학금을 받으려면 평균이 90점은 돼야 한다.',
     '이번에는 큰 실수 없이 발표를 마쳤다.',

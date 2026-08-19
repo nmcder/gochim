@@ -54,7 +54,7 @@ do the work:
 | `실수 없이` | untouched (hard-coded exception) | untouched (`실수/NNG`) |
 | `할수있는` | detected | detected (`수/NNB`) |
 
-Measured on the project's golden test set: recall 0.939 → 0.953, precision stays at **1.000**.
+Measured on the project's golden test set: recall 0.939 → 0.952, precision stays at **1.000**.
 
 ## Loading
 

@@ -28,6 +28,8 @@ interface Pleonasm {
   when?: (before: string) => boolean
   /** 지워지는 말에 조사가 붙어 있을 때, 그 말을 적어 두면 조사를 남는 말에 맞게 고친다. */
   josaFrom?: string
+  /** 매치 바로 뒤가 이 꼴이면 발화하지 않는다. */
+  denyAfter?: RegExp
 }
 
 const ENTRIES: Pleonasm[] = [
@@ -45,9 +47,15 @@ const ENTRIES: Pleonasm[] = [
     keep: '미리',
     // '종이 사전에', '국어 사전에'의 '사전'은 辭典이다. 앞 어절을 보고 걸러낸다.
     when: (before) => !/(국어|영한|한영|종이|전자|의학|백과|용어|한자)\s*$/.test(before),
+    // '미리보기'는 한 낱말(명사)이라 부사 '미리'가 아니다.
+    denyAfter: /^보기/,
     explain: "'사전(事前)'이 이미 '미리'라는 뜻입니다.",
     examples: [{ wrong: '사전에 미리 신청서를 제출해야 한다.', right: '미리 신청서를 제출해야 한다.' }],
-    counterExamples: ['국어사전에 미리 찾아본 낱말이 나온다.', '모르는 단어는 종이 사전에 미리 표시해 둔다.'],
+    counterExamples: [
+      '국어사전에 미리 찾아본 낱말이 나온다.',
+      '모르는 단어는 종이 사전에 미리 표시해 둔다.',
+      '새 공지는 사전에 미리보기로 오류를 점검한다.',
+    ],
   },
   {
     id: 'nameun-yeosaeng',
@@ -65,6 +73,30 @@ const ENTRIES: Pleonasm[] = [
       { wrong: '다음 회의 날짜는 아직 미정이라고 들었습니다.', right: '다음 회의 날짜는 미정이라고 들었습니다.' },
     ],
     counterExamples: ['아직 미정 씨한테는 말하지 않았다.', '아직 미정이가 오지 않아 회의를 시작하지 못했다.'],
+  },
+  {
+    id: 'gati-donghaeng',
+    pattern: /같이\s+(동행)(?=[하해했])/g,
+    // '어머니와 같이 동행해'처럼 공동격 조사가 앞에 있으면 '같이'가 그쪽을 꾸민다.
+    when: (before) => !/[와과랑]\s*$|하고\s*$/.test(before),
+    explain: "'동행(同行)'의 '동'이 이미 '함께'라는 뜻입니다.",
+    examples: [
+      { wrong: '미성년자는 보호자가 같이 동행해야 합니다.', right: '미성년자는 보호자가 동행해야 합니다.' },
+    ],
+    counterExamples: ['어머니와 같이 동행해 검사를 받았다.'],
+  },
+  {
+    id: 'geodeup-banbok',
+    pattern: /거듭\s+(반복)(?=[하되됐된했])/g,
+    explain: "'반복(反復)'이 이미 '되풀이함'이라는 뜻입니다.",
+    examples: [{ wrong: '같은 질문이 회의마다 거듭 반복됐다.', right: '같은 질문이 회의마다 반복됐다.' }],
+  },
+  {
+    id: 'dasi-jaegae',
+    pattern: /다시\s+(재개)(?=[하되될됐된])/g,
+    explain: "'재개(再開)'의 '재'가 이미 '다시'라는 뜻입니다.",
+    examples: [{ wrong: '공사가 다음 달부터 다시 재개될 예정이다.', right: '공사가 다음 달부터 재개될 예정이다.' }],
+    counterExamples: ['한 번 멈췄던 공사가 재개된 뒤 다시 멈췄다.'],
   },
   {
     id: 'gyesok-sokchul',
@@ -89,12 +121,6 @@ const ENTRIES: Pleonasm[] = [
     explain: "'과반수(過半數)'가 이미 '절반이 넘는 수'라는 뜻입니다. ('반수 이상'은 맞는 표현입니다)",
     examples: [{ wrong: '참석자 과반수 이상이 찬성했다.', right: '참석자 과반수가 찬성했다.' }],
     counterExamples: ['참석자 반수 이상이 찬성했다.'],
-  },
-  {
-    id: 'mae-mada',
-    pattern: /(?<![가-힣])매\s+([가-힣]{1,4}마다)/g,
-    explain: "'매(每)'와 '-마다'가 같은 뜻입니다. 하나만 쓰면 됩니다.",
-    examples: [{ wrong: '매 학기마다 장학금을 신청했다.', right: '학기마다 장학금을 신청했다.' }],
   },
   {
     id: 'seuseuro-jagak',
@@ -157,6 +183,7 @@ export const redundancyRules: Rule[] = ENTRIES.map((entry) =>
       if (entry.when && !entry.when(ctx.text.slice(Math.max(0, ctx.index - 12), ctx.index))) return null
       const keep = entry.keep ?? ctx.match[1]
       if (!keep) return null
+      if (entry.denyAfter?.test(ctx.text.slice(ctx.index + ctx.match[0].length))) return null
 
       // 지워지는 말에 조사가 붙어 있으면 남는 말에 맞게 고친다. '과반수 이상이 → 과반수가'
       const rest = ctx.text.slice(ctx.index + ctx.match[0].length)

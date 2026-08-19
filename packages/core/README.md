@@ -107,9 +107,9 @@ Measured against the golden test set in this repo (`npm run golden:report`):
 
 | | |
 | --- | --- |
-| Precision | **1.000** — zero false positives across 512 correct sentences, 303 of which are traps written specifically to break naive rules |
-| Recall | 0.939 (0.953 with the morphological layer) |
-| Rules | 88, carrying 272 examples and 173 counter-examples — all enforced by the test suite |
+| Precision | **1.000** — zero false positives across 553 correct sentences, 326 of which are traps written specifically to break naive rules |
+| Recall | 0.939 (0.952 with the morphological layer) |
+| Rules | 96, carrying 287 examples and 189 counter-examples — all enforced by the test suite |
 | Throughput | 0.1 ms per 1,000 characters |
 
 ## What it does not do

@@ -62,6 +62,12 @@ const WORDS: Loanword[] = [
   { wrong: '후라이팬', right: '프라이팬', note: '[f]는 ㅍ으로 적습니다(제3장 제1절 제6항). 일본식 표기의 영향입니다.' },
   { wrong: '쇼파', right: '소파', note: 'sofa의 첫 음절은 [soʊ]라 소입니다.' },
   { wrong: '리모콘', right: '리모컨', note: 'remote control의 준말로, control의 [ə]는 ㅓ입니다.' },
+  { wrong: '쥬스', right: '주스', note: "juice의 [uː]는 'ㅜ'입니다. 'ㅈ' 뒤에 이중 모음을 적지 않습니다(제2장 표1)." },
+  { wrong: '스케쥴', right: '스케줄', note: "schedule의 어말 [uːl]은 '줄'입니다. 'ㅈ' 뒤에 이중 모음을 적지 않습니다." },
+  { wrong: '데스크탑', right: '데스크톱', note: 'desktop의 [ɒ]는 ㅗ에 대응합니다.' },
+  { wrong: '도너츠', right: '도넛', note: "doughnut은 단수형을 기준으로 '도넛'으로 적습니다. 어말 [t]는 받침 ㅅ입니다." },
+  { wrong: '도넛츠', right: '도넛', note: "표준국어대사전 표제어는 '도넛'입니다." },
+  { wrong: '엘레베이터', right: '엘리베이터', note: 'elevator의 둘째 음절 모음은 [ɪ]라 리로 적습니다.' },
   { wrong: '부페', right: '뷔페', note: '프랑스어 buffet의 [y]는 ㅟ로 적습니다.' },
 ]
 

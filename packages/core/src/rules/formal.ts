@@ -1,3 +1,4 @@
+import { finalOf } from '../hangul.js'
 import { defineRule } from './define.js'
 import type { Rule } from '../types.js'
 
@@ -230,6 +231,65 @@ export const kkeseoAgreement = defineRule({
   counterExamples: ['사장님께서 부르셔서 제가 회의실로 갔습니다.'],
 })
 
+
+export const waeIrae = defineRule({
+  id: 'wae-irae',
+  category: 'spacing',
+  confidence: 0.94,
+  // 부사 '왜'와 '이러다'는 별개의 말이다.
+  pattern: /(?<![가-힣])왜(이래|이러|이랬|이러지|이럴)/g,
+  resolve(ctx) {
+    const tail = ctx.match[1] ?? ''
+    return {
+      suggestions: [`왜 ${tail}`],
+      message: "부사 '왜'는 뒤 말과 띄어 씁니다.",
+      explain: "'왜'는 부사, '이러다'는 동사입니다. 서로 다른 낱말이라 띄어 씁니다.",
+      refs: ['한글 맞춤법 제2항'],
+    }
+  },
+  examples: [{ wrong: '야 너 오늘따라 왜이래 무슨 일 있어?', right: '야 너 오늘따라 왜 이래 무슨 일 있어?' }],
+  counterExamples: ['왜 이렇게 늦었어?'],
+})
+
+export const myeotBeon = defineRule({
+  id: 'myeot-beon',
+  category: 'spacing',
+  confidence: 0.94,
+  // 관형사 '몇'과 단위 명사는 띄어 쓴다.
+  pattern: /(?<![가-힣])몇(번|개|명|시|분|살|권|장|가지|군데|차례)(?=[을를이가은는도만의에]|\s|[.,!?]|$)/g,
+  resolve(ctx) {
+    const unit = ctx.match[1] ?? ''
+    return {
+      suggestions: [`몇 ${unit}`],
+      message: "관형사 '몇'은 단위 명사와 띄어 씁니다.",
+      explain: "'몇'은 수를 묻는 관형사이고 '번·개·명'은 단위 명사입니다. 서로 띄어 씁니다.",
+      refs: ['한글 맞춤법 제43항'],
+    }
+  },
+  examples: [{ wrong: '내가 몇번을 말했는지 기억도 안 나.', right: '내가 몇 번을 말했는지 기억도 안 나.' }],
+  counterExamples: ['며칠 뒤에 보자.', '몇몇 사람만 왔다.'],
+})
+
+export const kkeoya = defineRule({
+  id: 'kkeo-ya',
+  category: 'ending',
+  confidence: 0.93,
+  // 의존명사 '거'를 된소리로 적은 형태. '것'의 구어형이라 '거'로 적고 띄어 쓴다.
+  pattern: /([가-힣])꺼(야|예요|에요|다|니|임|였)/g,
+  resolve(ctx) {
+    const [, prev = '', tail = ''] = ctx.match
+    if (finalOf(prev) !== 'ㄹ') return null
+    return {
+      suggestions: [`${prev} 거${tail}`],
+      message: "의존명사 '거'는 된소리로 적지 않고 띄어 씁니다.",
+      explain: "'거'는 '것'의 구어형 의존명사입니다. [꺼]로 소리 나도 '거'로 적고 앞말과 띄어 씁니다.",
+      refs: ['한글 맞춤법 제42항'],
+    }
+  },
+  examples: [{ wrong: '너 내일 학교 안 가면 뭐 할꺼야?', right: '너 내일 학교 안 가면 뭐 할 거야?' }],
+  counterExamples: ['이거 네 거야?', '반찬 껍데기를 벗겼다.'],
+})
+
 export const formalRules: Rule[] = [
   jeOrdinal,
   garyangSuffix,
@@ -240,4 +300,7 @@ export const formalRules: Rule[] = [
   doublePassive,
   nnbDeung,
   kkeseoAgreement,
+  waeIrae,
+  myeotBeon,
+  kkeoya,
 ]

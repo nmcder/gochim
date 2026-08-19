@@ -104,7 +104,7 @@ export const siljelo = defineRule({
     if (insideQuotes(ctx.text, ctx.index)) return null
     const rest = ctx.text.slice(ctx.index + 4)
     // '참된 실재로 여기다'처럼 자격·간주 구문이면 '실재로'가 맞다.
-    if (/^\s*(?:[가-힣]+\s+){0,2}(?:간주|여[기겼긴길]|받아들|인정|믿|본|봤|보았)/.test(rest)) return null
+    if (/^\s*(?:[가-힣]+\s+){0,2}(?:간주|여[기겼긴길]|받아들|인정|믿|본|봤|보았|착각|혼동|오해)/.test(rest)) return null
     return {
       suggestions: ['실제로'],
       message: "'사실은'의 뜻은 '실제로'입니다.",
@@ -116,6 +116,7 @@ export const siljelo = defineRule({
   counterExamples: [
     '이데아를 참된 실재로 여기는 관점이다.',
     '철학자들은 이데아를 참된 실재로 여겼다.',
+    '그는 소설 속 세계를 실재로 착각했다.',
     '실재론은 관념론과 대립한다.',
   ],
 })

@@ -223,6 +223,80 @@ export const honorificTimeGreeting = defineRule({
   examples: [{ wrong: '오늘 하루도 즐거운 시간 되세요.', right: '오늘 하루도 즐거운 시간 보내세요.' }],
 })
 
+
+export const honorificMalsseum = defineRule({
+  id: 'honorific-malsseum',
+  category: 'ending',
+  confidence: 0.9,
+  // 내가 한 말에는 '말씀하시다'가 아니라 '말씀드리다'를 쓴다.
+  pattern: /(제가|저희가)([^.!?]{0,14}?)말씀하신/g,
+  resolve(ctx) {
+    if (/께서|님이/.test(ctx.match[2] ?? '')) return null
+    return {
+      suggestions: ['말씀드린'],
+      offset: ctx.match[0].length - 4,
+      length: 4,
+      message: '자기가 한 말은 높이지 않습니다.',
+      explain: "'말씀하시다'는 남의 말을 높이는 표현입니다. 내가 한 말은 '말씀드리다'로 낮춥니다.",
+      refs: ['표준 언어 예절'],
+    }
+  },
+  examples: [
+    { wrong: '제가 앞에서 말씀하신 것처럼 예산은 확정되었습니다.', right: '제가 앞에서 말씀드린 것처럼 예산은 확정되었습니다.' },
+  ],
+  counterExamples: ['교수님께서 말씀하신 내용을 정리했습니다.'],
+})
+
+export const honorificDowajuda = defineRule({
+  id: 'honorific-dowajuda',
+  category: 'ending',
+  confidence: 0.9,
+  // 윗사람을 도울 때는 '도와드리다'를 쓴다.
+  pattern: /(부장님|과장님|사장님|팀장님|선생님|교수님|어머님|아버님|선배님)([^.!?]{0,20}?)도와주(겠습니다|겠어요|시겠습니다)/g,
+  resolve(ctx) {
+    const tail = ctx.match[3] ?? ''
+    // 도움을 받는 사람이 따로 있으면 그 사람이 기준이다. '후배를 도와주겠습니다'는 맞는 말이다.
+    if (/(?:후배|동생|친구|아이|학생|신입|팀원|부하)(?:를|을)/.test(ctx.match[2] ?? '')) return null
+    return {
+      suggestions: [`도와드리${tail}`],
+      offset: ctx.match[0].length - (3 + tail.length),
+      length: 3 + tail.length,
+      message: '윗사람을 도울 때는 "도와드리다"를 씁니다.',
+      explain: "'주다'의 높임말은 '드리다'입니다. 듣는 이가 윗사람이면 '도와드리겠습니다'로 씁니다.",
+      refs: ['표준 언어 예절'],
+    }
+  },
+  examples: [{ wrong: '부장님, 그 일은 제가 도와주겠습니다.', right: '부장님, 그 일은 제가 도와드리겠습니다.' }],
+  counterExamples: [
+    '친구가 이사하는 걸 도와주겠다고 했다.',
+    '부장님, 그 자료 정리는 제가 후배를 도와주겠습니다.',
+  ],
+})
+
+export const honorificShopClosed = defineRule({
+  id: 'honorific-shop-closed',
+  category: 'ending',
+  confidence: 0.92,
+  // 가게가 쉬는 것을 높이면 사물 존대가 된다.
+  pattern: /(매장|가게|식당|병원|은행|영업점|카페|약국|지점)([^.!?]{0,20}?)(쉬십니다|쉬세요|쉬십니다만)/g,
+  resolve(ctx) {
+    const honored = ctx.match[3] ?? ''
+    const plain: Record<string, string> = { 쉬십니다: '쉽니다', 쉬세요: '쉽니다', 쉬십니다만: '쉽니다만' }
+    const fixed = plain[honored]
+    if (!fixed) return null
+    return {
+      suggestions: [fixed],
+      offset: ctx.match[0].length - honored.length,
+      length: honored.length,
+      message: '가게나 매장에는 높임을 쓰지 않습니다.',
+      explain: "높임의 대상은 사람입니다. '매장이 쉬십니다'는 매장을 높이는 말이 됩니다.",
+      refs: ['표준 언어 예절'],
+    }
+  },
+  examples: [{ wrong: '저희 매장은 매주 월요일에 쉬십니다.', right: '저희 매장은 매주 월요일에 쉽니다.' }],
+  counterExamples: ['할아버지는 요즘 집에서 쉬십니다.'],
+})
+
 export const honorificRules: Rule[] = [
   honorificObject,
   honorificCopula,
@@ -232,4 +306,7 @@ export const honorificRules: Rule[] = [
   honorificSilgeyo,
   honorificSelf,
   honorificTimeGreeting,
+  honorificMalsseum,
+  honorificDowajuda,
+  honorificShopClosed,
 ]
