@@ -20,6 +20,7 @@ const CATEGORY_LABEL = {
   spacing: '띄어쓰기',
   confusable: '혼동어',
   ending: '어미·서술격',
+  redundancy: '겹말·군더더기',
 }
 
 const escape = (s) => String(s).replace(/\|/g, '\\|')

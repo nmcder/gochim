@@ -8,6 +8,8 @@ export type Category =
   | 'confusable'
   /** 어미·조사 표기. 할께요 → 할게요 */
   | 'ending'
+  /** 겹말·군더더기. 다시 재발 → 재발. 틀린 건 아니라 경고로만 알린다. */
+  | 'redundancy'
 
 export type Severity = 'error' | 'warning'
 

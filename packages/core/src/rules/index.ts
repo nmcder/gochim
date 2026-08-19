@@ -4,6 +4,8 @@ import { attachedRules } from './attached.js'
 import { doeDwae, doeSentenceFinal, dwaeJiAnh } from './doe.js'
 import { endingRules } from './endings.js'
 import { confusable, lexicon } from './lexicon.js'
+import { loanwordRules } from './loanword.js'
+import { redundancyRules } from './redundancy.js'
 import { morphologyRules } from './morphology.js'
 import { spacingRules } from './spacing.js'
 
@@ -12,6 +14,8 @@ export * from './attached.js'
 export * from './doe.js'
 export * from './endings.js'
 export * from './lexicon.js'
+export * from './loanword.js'
+export * from './redundancy.js'
 export * from './morphology.js'
 export * from './spacing.js'
 export { defineLexicon, defineRule } from './define.js'
@@ -36,5 +40,7 @@ export const allRules: Rule[] = [
   ...spacingRules,
   ...attachedRules,
   ...morphologyRules,
+  ...loanwordRules,
+  ...redundancyRules,
   ...endingRules,
 ]

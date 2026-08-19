@@ -9,6 +9,7 @@ const CATEGORY_LABELS: Record<Category, string> = {
   spacing: '띄어쓰기',
   confusable: '혼동어',
   ending: '어미·서술격',
+  redundancy: '겹말·군더더기',
 }
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T
