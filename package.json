@@ -20,7 +20,8 @@
     "rules:doc": "npm run build -w @gochim/core && node scripts/rules-doc.mjs",
     "build:extension": "npm run build -w @gochim/extension",
     "pack:extension": "npm run build -w @gochim/extension && node apps/extension/scripts/pack.mjs",
-    "bench": "npm run build -w @gochim/core && npm run build -w @gochim/morph && node scripts/bench.mjs"
+    "bench": "npm run build -w @gochim/core && npm run build -w @gochim/morph && node scripts/bench.mjs",
+    "prose:report": "npm run build -w @gochim/core && node scripts/prose-report.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
