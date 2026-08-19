@@ -21,6 +21,29 @@ export interface Settings {
    * 켜면 품사를 보고 판정해 `먹을만큼만` 같은 띄어쓰기를 더 잡는다.
    */
   morph: boolean
+  /**
+   * 커서가 오류 위에 있으면 팝오버를 자동으로 띄울지.
+   *
+   * 끄면 밑줄을 클릭해야 고침 UI가 나온다. 켜면 타이핑을 멈춘 순간
+   * 커서 자리에서 바로 고칠 수 있어 손이 마우스로 가지 않는다.
+   */
+  inlineSuggest: boolean
+  /** 팝오버가 열려 있을 때 제안을 받아들이는 키. */
+  acceptKey: 'Tab' | 'Enter' | 'Alt+Enter'
+  /**
+   * 확신도가 이 값 이상인 오류를 묻지 않고 바로 고친다. 0이면 끔.
+   *
+   * **커서가 지나간 자리만** 고친다 — 지금 치고 있는 낱말을 건드리면
+   * 글자가 튀어서 타이핑이 망가진다.
+   */
+  autoFixAbove: number
+  /**
+   * 브라우저 기본 맞춤법 검사를 끌지.
+   *
+   * 크롬이 그리는 빨간 물결과 고침의 밑줄이 겹쳐 두 줄로 보이는 것을 막는다.
+   * 입력칸의 `spellcheck` 속성만 잠시 바꾸고, 손을 뗄 때 원래대로 돌려놓는다.
+   */
+  suppressNativeSpellcheck: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -28,6 +51,10 @@ export const DEFAULT_SETTINGS: Settings = {
   minConfidence: 0,
   categories: [],
   morph: false,
+  inlineSuggest: true,
+  acceptKey: 'Tab',
+  autoFixAbove: 0,
+  suppressNativeSpellcheck: true,
 }
 
 const KEY = 'settings'

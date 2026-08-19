@@ -6,6 +6,17 @@
  *  - `contenteditable`        — 값이 DOM 트리다. 텍스트 노드가 흩어져 있다.
  *
  * 밑줄을 긋는 방법도 여기서 갈린다([underline.ts](./underline.ts) 참고).
+ *
+ * ## contenteditable의 오프셋은 한 곳에서만 만든다
+ *
+ * 예전에는 검사할 글을 `innerText`로 읽고, 오프셋→DOM 변환은 텍스트 노드를 세어서 했다.
+ * 이 둘은 **줄바꿈을 세는 방식이 달랐다.** `innerText`는 블록 경계마다 줄바꿈을 만들어
+ * 내는데 노드 순회는 `<br>`만 셌다. 그래서 문단이 하나 지날 때마다 오프셋이 한 글자씩
+ * 밀렸고, 문단 일곱 개짜리 글에서는 밑줄이 열 글자 넘게 어긋난 자리에 그어졌다.
+ * 고치기를 누르면 엉뚱한 자리가 바뀌었다.
+ *
+ * 그래서 지금은 [readText]가 **글과 위치 지도를 한 번에** 만든다.
+ * 읽기와 쓰기가 같은 순회를 쓰므로 둘이 어긋날 방법이 없다.
  */
 
 export interface EditableTarget {
@@ -57,7 +68,7 @@ function richTarget(element: HTMLElement): EditableTarget {
   return {
     element,
     kind: 'rich',
-    getText: () => element.innerText,
+    getText: () => readText(element).text,
     replaceRange(start, end, replacement) {
       const range = rangeFor(element, start, end)
       if (!range) return
@@ -74,60 +85,114 @@ function richTarget(element: HTMLElement): EditableTarget {
   }
 }
 
+/** 줄바꿈을 만들어 내는 요소. 이 경계에서 글이 이어 붙으면 없던 낱말이 생긴다. */
+const BLOCK_TAGS = new Set([
+  'ADDRESS', 'ARTICLE', 'ASIDE', 'BLOCKQUOTE', 'DD', 'DIV', 'DL', 'DT', 'FIELDSET',
+  'FIGCAPTION', 'FIGURE', 'FOOTER', 'FORM', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+  'HEADER', 'HGROUP', 'HR', 'LI', 'MAIN', 'NAV', 'OL', 'P', 'PRE', 'SECTION',
+  'TABLE', 'TBODY', 'TD', 'TFOOT', 'TH', 'THEAD', 'TR', 'UL',
+])
+
+interface Segment {
+  node: Text
+  /** 이 텍스트 노드가 전체 글에서 차지하는 구간. */
+  start: number
+  end: number
+}
+
+interface TextMap {
+  text: string
+  segments: Segment[]
+}
+
 /**
- * DOM 위치를 글자 오프셋으로 옮긴다. `rangeFor`의 반대 방향이다.
+ * contenteditable의 글과 위치 지도를 함께 만든다.
+ *
+ * `innerText`를 쓰지 않는 이유는 그 값이 CSS(줄바꿈, `display`, 가시성)에 따라
+ * 달라져서 DOM 순회로 되짚을 수 없기 때문이다. 여기서는 **우리가 정한 규칙**으로
+ * 글을 만들고, 그 규칙으로 되짚는다. 정확히 브라우저와 같을 필요는 없고
+ * 읽기와 쓰기가 서로 같기만 하면 된다.
+ */
+export function readText(root: HTMLElement): TextMap {
+  let text = ''
+  const segments: Segment[] = []
+
+  const breakLine = (): void => {
+    if (text.length > 0 && !text.endsWith('\n')) text += '\n'
+  }
+
+  const visit = (node: Node): void => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const data = node.textContent ?? ''
+      if (data.length === 0) return
+      segments.push({ node: node as Text, start: text.length, end: text.length + data.length })
+      text += data
+      return
+    }
+    if (!(node instanceof HTMLElement)) return
+    if (node.tagName === 'BR') {
+      text += '\n'
+      return
+    }
+
+    const isBlock = BLOCK_TAGS.has(node.tagName)
+    if (isBlock) breakLine()
+    for (const child of node.childNodes) visit(child)
+    if (isBlock) breakLine()
+  }
+
+  for (const child of root.childNodes) visit(child)
+  return { text, segments }
+}
+
+/**
+ * DOM 위치를 글자 오프셋으로 옮긴다. [rangeFor]의 반대 방향이다.
  *
  * `Selection.anchorOffset`은 **그 텍스트 노드 안에서의** 위치라 문서 전체 기준이 아니다.
  * 긴 글에서 커서 주변만 잘라 검사하려면 전체 기준 위치가 필요하다.
  */
 export function offsetOf(root: HTMLElement, node: Node, offsetInNode: number): number {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT)
-  let offset = 0
-  let current = walker.nextNode()
-  while (current) {
-    if (current === node) return offset + offsetInNode
-    if (current.nodeType === Node.ELEMENT_NODE) {
-      if ((current as Element).tagName === 'BR') offset += 1
-    } else {
-      offset += current.textContent?.length ?? 0
-    }
-    current = walker.nextNode()
+  const { segments } = readText(root)
+
+  if (node.nodeType === Node.TEXT_NODE) {
+    const segment = segments.find((s) => s.node === node)
+    if (segment) return segment.start + Math.min(offsetInNode, segment.end - segment.start)
+    return 0
   }
-  return offset
+
+  // 커서가 요소에 걸려 있으면 그 앞 자식들까지의 길이로 어림한다.
+  const children = [...node.childNodes].slice(0, offsetInNode)
+  let last = 0
+  for (const child of children) {
+    for (const segment of segments) {
+      if (segment.node === child || child.contains(segment.node)) last = Math.max(last, segment.end)
+    }
+  }
+  return last
 }
 
-/**
- * 글자 오프셋을 DOM Range로 옮긴다.
- *
- * `innerText`는 줄바꿈을 만들어 내므로 텍스트 노드를 이어 붙인 것과 길이가 어긋날 수 있다.
- * 그래서 `<br>`과 블록 경계에서 줄바꿈 한 글자를 세어 맞춘다.
- */
+/** 글자 오프셋을 DOM Range로 옮긴다. [readText]가 만든 지도를 그대로 쓴다. */
 export function rangeFor(root: HTMLElement, start: number, end: number): Range | null {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT)
+  const { segments } = readText(root)
+  if (segments.length === 0) return null
+
   const range = document.createRange()
-  let offset = 0
-  let started = false
+  let opened = false
 
-  let node = walker.nextNode()
-  while (node) {
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      if ((node as Element).tagName === 'BR') offset += 1
-      node = walker.nextNode()
-      continue
+  for (const segment of segments) {
+    if (!opened && start < segment.end) {
+      range.setStart(segment.node, Math.max(0, start - segment.start))
+      opened = true
     }
-
-    const length = node.textContent?.length ?? 0
-    if (!started && offset + length >= start) {
-      range.setStart(node, start - offset)
-      started = true
-    }
-    if (started && offset + length >= end) {
-      range.setEnd(node, end - offset)
+    if (opened && end <= segment.end) {
+      range.setEnd(segment.node, Math.max(0, end - segment.start))
       return range
     }
-    offset += length
-    node = walker.nextNode()
   }
 
-  return started ? range : null
+  if (!opened) return null
+  // 끝점이 글 밖이면 마지막 노드 끝으로 붙인다.
+  const last = segments[segments.length - 1]!
+  range.setEnd(last.node, last.end - last.start)
+  return range
 }

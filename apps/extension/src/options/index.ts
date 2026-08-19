@@ -19,6 +19,11 @@ const morph = $<HTMLInputElement>('morph')
 const confidence = $<HTMLInputElement>('confidence')
 const confidenceValue = $('confidence-value')
 const categoryBox = $('categories')
+const inlineSuggest = $<HTMLInputElement>('inline-suggest')
+const acceptKey = $<HTMLSelectElement>('accept-key')
+const autofix = $<HTMLInputElement>('autofix')
+const autofixValue = $('autofix-value')
+const suppressNative = $<HTMLInputElement>('suppress-native')
 const ignoredList = $<HTMLUListElement>('ignored')
 const ignoredEmpty = $('ignored-empty')
 
@@ -37,6 +42,34 @@ enabled.addEventListener('change', async () => {
 morph.checked = settings.morph
 morph.addEventListener('change', async () => {
   settings = await saveSettings({ morph: morph.checked })
+})
+
+inlineSuggest.checked = settings.inlineSuggest
+inlineSuggest.addEventListener('change', async () => {
+  settings = await saveSettings({ inlineSuggest: inlineSuggest.checked })
+})
+
+acceptKey.value = settings.acceptKey
+acceptKey.addEventListener('change', async () => {
+  settings = await saveSettings({ acceptKey: acceptKey.value as typeof settings.acceptKey })
+})
+
+suppressNative.checked = settings.suppressNativeSpellcheck
+suppressNative.addEventListener('change', async () => {
+  settings = await saveSettings({ suppressNativeSpellcheck: suppressNative.checked })
+})
+
+const showAutofix = (value: number): void => {
+  autofixValue.textContent = value <= 0 ? '끔' : value.toFixed(2)
+}
+
+autofix.value = String(settings.autoFixAbove)
+showAutofix(settings.autoFixAbove)
+autofix.addEventListener('input', () => {
+  showAutofix(Number(autofix.value))
+})
+autofix.addEventListener('change', async () => {
+  settings = await saveSettings({ autoFixAbove: Number(autofix.value) })
 })
 
 confidence.addEventListener('input', () => {

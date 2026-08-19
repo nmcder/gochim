@@ -33,6 +33,10 @@ interface Session {
   /** 화면에 그려진 것 — 위 둘을 합친 결과. */
   diagnostics: Diagnostic[]
   timer: number
+  /** 손대기 전의 `spellcheck` 속성. 뗄 때 그대로 돌려놓는다. */
+  spellcheckWas: string | null
+  /** 저절로 띄운 카드가 가리키는 진단. 커서가 벗어나면 닫는다. */
+  suggested: Diagnostic | null
 }
 
 /**
@@ -73,6 +77,61 @@ function paint(): void {
   if (!session) return
   session.diagnostics = session.morph.length > 0 ? mergeDiagnostics(session.base, session.morph) : session.base
   session.layer.render(session.diagnostics)
+  suggestAtCaret()
+}
+
+/** 커서가 걸쳐 있는 진단. 방금 친 낱말을 고르기 위해 끝점까지 포함해서 본다. */
+function diagnosticAtCaret(caret: number): Diagnostic | null {
+  if (!session) return null
+  return session.diagnostics.find((d) => d.start <= caret && caret <= d.end) ?? null
+}
+
+/**
+ * 타이핑을 멈춘 자리에서 바로 고칠 수 있게 카드를 띄운다.
+ *
+ * 손이 마우스로 가지 않는 것이 요점이다. 밑줄을 클릭하러 되돌아가야 한다면
+ * 대부분은 그냥 틀린 채로 두고 만다.
+ */
+function suggestAtCaret(): void {
+  if (!session || !settings?.inlineSuggest) return
+  // 사용자가 직접 연 카드는 건드리지 않는다.
+  if (popover.isOpen && !session.suggested) return
+
+  const hit = diagnosticAtCaret(caretOf(session.target))
+  if (!hit) {
+    if (session.suggested) {
+      session.suggested = null
+      popover.hide()
+    }
+    return
+  }
+  if (session.suggested && session.suggested.start === hit.start && session.suggested.end === hit.end) return
+
+  const rect = session.layer.rectOf(hit)
+  if (!rect) return
+  session.suggested = hit
+  popover.show(hit, rect, { compact: true, acceptKey: settings.acceptKey })
+}
+
+/**
+ * 확신도가 높은 오류를 묻지 않고 고친다.
+ *
+ * **커서가 이미 지나간 낱말만** 손댄다. 지금 치고 있는 글자를 바꾸면
+ * 글자가 튀어서 입력이 망가진다. 그래서 뒤에 공백이 온 것만 고친다.
+ */
+function autoFix(): boolean {
+  const threshold = settings?.autoFixAbove ?? 0
+  if (!session || threshold <= 0) return false
+  const caret = caretOf(session.target)
+  const text = session.target.getText()
+  const done = session.diagnostics
+    .filter((d) => d.end < caret && d.confidence >= threshold && /\s/.test(text[d.end] ?? ''))
+    .sort((a, b) => b.start - a.start)
+  const target = done[0]
+  const replacement = target?.suggestions[0]
+  if (!target || replacement == null) return false
+  session.target.replaceRange(target.start, target.end, replacement)
+  return true
 }
 
 let session: Session | null = null
@@ -139,6 +198,11 @@ function runCheck(): void {
   session.morph = []
   paint()
 
+  if (autoFix()) {
+    scheduleCheck(0)
+    return
+  }
+
   if (settings.morph) ensureMorphClient()?.request(text, [...ignoreStore.keys()])
 }
 
@@ -151,6 +215,9 @@ function scheduleCheck(delay = DEBOUNCE_MS): void {
 function detach(): void {
   if (!session) return
   window.clearTimeout(session.timer)
+  // 빌린 것은 돌려놓는다.
+  if (session.spellcheckWas === null) session.target.element.removeAttribute('spellcheck')
+  else session.target.element.setAttribute('spellcheck', session.spellcheckWas)
   session.layer.destroy()
   session = null
   popover.hide()
@@ -159,7 +226,22 @@ function detach(): void {
 function attach(target: EditableTarget): void {
   if (session?.target.element === target.element) return
   detach()
-  session = { target, layer: createUnderlineLayer(target), base: [], morph: [], diagnostics: [], timer: 0 }
+
+  // 크롬이 그리는 빨간 물결과 고침의 밑줄이 겹치면 두 줄로 보인다.
+  // 호스트 DOM을 건드리지 않는다는 원칙의 유일한 예외 — 속성 하나이고, 뗄 때 되돌린다.
+  const spellcheckWas = target.element.getAttribute('spellcheck')
+  if (settings?.suppressNativeSpellcheck !== false) target.element.setAttribute('spellcheck', 'false')
+
+  session = {
+    target,
+    layer: createUnderlineLayer(target),
+    base: [],
+    morph: [],
+    diagnostics: [],
+    timer: 0,
+    spellcheckWas,
+    suggested: null,
+  }
   scheduleCheck(0)
 }
 
@@ -191,8 +273,48 @@ document.addEventListener(
   true,
 )
 
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && popover.isOpen) popover.hide()
+/** 눌린 키가 설정된 적용 키인가. */
+function isAcceptKey(event: KeyboardEvent): boolean {
+  switch (settings?.acceptKey) {
+    case 'Enter':
+      return event.key === 'Enter' && !event.shiftKey && !event.altKey
+    case 'Alt+Enter':
+      return event.key === 'Enter' && event.altKey
+    default:
+      return event.key === 'Tab' && !event.shiftKey && !event.altKey && !event.ctrlKey
+  }
+}
+
+document.addEventListener(
+  'keydown',
+  (event) => {
+    if (!popover.isOpen) return
+
+    if (event.key === 'Escape') {
+      if (session) session.suggested = null
+      popover.hide()
+      return
+    }
+
+    // 카드가 떠 있을 때만 키를 가로챈다. 그렇지 않으면 Tab으로 칸을 옮기지 못한다.
+    if (isAcceptKey(event)) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (session) session.suggested = null
+      popover.accept()
+    }
+  },
+  true,
+)
+
+// 커서가 오류 밖으로 나가면 저절로 띄운 카드는 닫는다.
+document.addEventListener('selectionchange', () => {
+  if (!session || !session.suggested) return
+  const hit = diagnosticAtCaret(caretOf(session.target))
+  if (!hit || hit.start !== session.suggested.start) {
+    session.suggested = null
+    popover.hide()
+  }
 })
 
 // 편집기가 통째로 사라지는 경우(SPA 이동)에 매달린 레이어를 정리한다.

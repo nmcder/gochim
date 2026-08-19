@@ -50,10 +50,26 @@ export interface PopoverActions {
   onIgnore(diagnostic: Diagnostic): void
 }
 
+export interface ShowOptions {
+  /**
+   * 타이핑 중에 저절로 뜬 카드인가.
+   *
+   * 저절로 뜬 카드는 글을 가리면 안 되므로 설명과 근거를 접고 한 줄로 보여 준다.
+   * 사용자가 밑줄을 직접 클릭했을 때는 전부 편다.
+   */
+  compact?: boolean
+  /** 제안을 받아들이는 키. 카드에 안내로 적는다. */
+  acceptKey?: string
+}
+
 export interface Popover {
-  show(diagnostic: Diagnostic, anchor: DOMRect): void
+  show(diagnostic: Diagnostic, anchor: DOMRect, options?: ShowOptions): void
   hide(): void
   readonly isOpen: boolean
+  /** 지금 열려 있는 진단. 단축키로 적용할 때 쓴다. */
+  readonly current: Diagnostic | null
+  /** 열려 있는 카드의 제안을 적용한다. */
+  accept(): void
   contains(node: Node): boolean
   destroy(): void
 }
@@ -71,20 +87,34 @@ export function createPopover(actions: PopoverActions): Popover {
   document.body.append(host)
 
   let open = false
+  let current: Diagnostic | null = null
 
   const hide = (): void => {
     open = false
+    current = null
     card.hidden = true
     card.replaceChildren()
+  }
+
+  const accept = (): void => {
+    if (!current) return
+    const diagnostic = current
+    hide()
+    actions.onApply(diagnostic)
   }
 
   return {
     get isOpen() {
       return open
     },
+    get current() {
+      return current
+    },
+    accept,
     contains: (node) => host.contains(node) || shadow.contains(node),
-    show(diagnostic, anchor) {
+    show(diagnostic, anchor, options = {}) {
       card.replaceChildren()
+      current = diagnostic
 
       const swap = document.createElement('div')
       swap.className = 'swap'
@@ -99,27 +129,34 @@ export function createPopover(actions: PopoverActions): Popover {
       to.textContent = diagnostic.suggestions[0] ?? ''
       swap.append(from, arrow, to)
 
-      const message = document.createElement('p')
-      message.className = 'msg'
-      message.textContent = diagnostic.message
-      card.append(swap, message)
+      card.append(swap)
 
-      if (diagnostic.explain) {
-        const why = document.createElement('p')
-        why.className = 'why'
-        why.textContent = diagnostic.explain
-        card.append(why)
-      }
-      if (diagnostic.refs?.length) {
-        const refs = document.createElement('div')
-        refs.className = 'refs'
-        refs.textContent = diagnostic.refs.join(' · ')
-        card.append(refs)
+      // 저절로 뜬 카드는 글 위를 덮는다. 한 줄로 줄이고 단축키만 알려 준다.
+      if (!options.compact) {
+        const message = document.createElement('p')
+        message.className = 'msg'
+        message.textContent = diagnostic.message
+        card.append(message)
+
+        if (diagnostic.explain) {
+          const why = document.createElement('p')
+          why.className = 'why'
+          why.textContent = diagnostic.explain
+          card.append(why)
+        }
+        if (diagnostic.refs?.length) {
+          const refs = document.createElement('div')
+          refs.className = 'refs'
+          refs.textContent = diagnostic.refs.join(' · ')
+          card.append(refs)
+        }
       }
 
       const applyButton = document.createElement('button')
       applyButton.className = 'btn btn--primary'
-      applyButton.textContent = `'${diagnostic.suggestions[0] ?? ''}'로 고치기`
+      applyButton.textContent = options.compact
+        ? `${options.acceptKey ?? 'Tab'} 고치기`
+        : `'${diagnostic.suggestions[0] ?? ''}'로 고치기`
       applyButton.addEventListener('click', () => {
         actions.onApply(diagnostic)
         hide()
@@ -127,10 +164,13 @@ export function createPopover(actions: PopoverActions): Popover {
 
       const ignoreButton = document.createElement('button')
       ignoreButton.className = 'btn btn--quiet'
-      ignoreButton.textContent = '무시'
+      ignoreButton.textContent = options.compact ? 'Esc 닫기' : '무시'
       ignoreButton.addEventListener('click', () => {
-        actions.onIgnore(diagnostic)
-        hide()
+        if (options.compact) hide()
+        else {
+          actions.onIgnore(diagnostic)
+          hide()
+        }
       })
 
       const actionRow = document.createElement('div')

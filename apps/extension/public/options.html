@@ -115,6 +115,53 @@
       </section>
 
       <section>
+        <h2>고치는 방식</h2>
+        <div class="row">
+          <div class="row__text">
+            <div class="row__title">쓰는 도중에 바로 제안</div>
+            <p class="row__note">
+              타이핑을 멈추면 커서가 놓인 오류의 고침 카드가 그 자리에 뜹니다.
+              끄면 밑줄을 클릭해야 카드가 나옵니다.
+            </p>
+          </div>
+          <input type="checkbox" id="inline-suggest" />
+        </div>
+        <div class="row">
+          <div class="row__text">
+            <div class="row__title">받아들이는 키</div>
+            <p class="row__note">
+              카드가 떠 있을 때만 이 키를 가로챕니다. <code>Esc</code>로 닫는 것은 항상 같습니다.
+            </p>
+          </div>
+          <select id="accept-key">
+            <option value="Tab">Tab</option>
+            <option value="Enter">Enter</option>
+            <option value="Alt+Enter">Alt + Enter</option>
+          </select>
+        </div>
+        <div class="row">
+          <div class="row__text">
+            <div class="row__title">자동 고침 <span id="autofix-value">끔</span></div>
+            <p class="row__note">
+              이 확신도 이상이면 묻지 않고 고칩니다. <strong>커서가 지나간 낱말만</strong> 손대므로
+              지금 치고 있는 글자는 건드리지 않습니다. 0으로 두면 끕니다.
+            </p>
+          </div>
+          <input type="range" id="autofix" min="0" max="1" step="0.02" />
+        </div>
+        <div class="row">
+          <div class="row__text">
+            <div class="row__title">브라우저 기본 맞춤법 검사 끄기</div>
+            <p class="row__note">
+              크롬이 그리는 빨간 물결과 겹쳐 밑줄이 두 줄로 보이는 것을 막습니다.
+              입력칸의 <code>spellcheck</code> 속성만 잠시 바꾸고, 손을 떼면 원래대로 돌려놓습니다.
+            </p>
+          </div>
+          <input type="checkbox" id="suppress-native" />
+        </div>
+      </section>
+
+      <section>
         <h2>검사할 분류</h2>
         <div id="categories"></div>
         <p class="row__note">전부 끄면 전부 켠 것과 같습니다.</p>
