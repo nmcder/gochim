@@ -89,6 +89,7 @@ const MIRRORED_STYLES = [
   'lineHeight',
   'textTransform',
   'textIndent',
+  'textAlign',
   'wordSpacing',
   'whiteSpace',
   'wordBreak',
@@ -122,8 +123,23 @@ function mirrorLayer(target: EditableTarget): UnderlineLayer {
     for (const property of MIRRORED_STYLES) mirror.style[property] = style[property]
     mirror.style.left = `${rect.left}px`
     mirror.style.top = `${rect.top}px`
-    mirror.style.width = `${rect.width}px`
-    mirror.style.height = `${rect.height}px`
+
+    // 여기서 rect.width를 쓰면 안 된다.
+    //
+    // getBoundingClientRect는 **세로 스크롤바까지 포함한** 너비를 준다. 거울은
+    // overflow:hidden이라 스크롤바가 없으므로, 그대로 베끼면 거울의 글줄이 원본보다
+    // 스크롤바 너비(약 15px)만큼 넓어진다. 그러면 줄바꿈이 원본보다 늦게 일어나서,
+    // 원본에서는 다음 줄로 넘어간 낱말이 거울에서는 앞 줄 끝에 남는다.
+    // 붙여 넣은 긴 글에서 밑줄이 스크롤바 자리에 그어지던 것이 이 때문이었다.
+    //
+    // clientWidth는 스크롤바를 뺀 안쪽(패딩+콘텐츠) 너비다. 여기에 테두리만 더하고
+    // box-sizing을 border-box로 못 박으면 거울의 글줄 너비가 원본과 정확히 같아진다.
+    const borderX = parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth)
+    const borderY = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth)
+    mirror.style.boxSizing = 'border-box'
+    mirror.style.width = `${field.clientWidth + borderX}px`
+    mirror.style.height = `${field.clientHeight + borderY}px`
+
     // input은 한 줄이라 줄바꿈을 막아야 자리가 맞는다.
     if (field instanceof HTMLInputElement) mirror.style.whiteSpace = 'pre'
     mirror.scrollTop = field.scrollTop
