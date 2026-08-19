@@ -29,7 +29,8 @@
 | 재현율 | 0.849 (1층만) → **0.879** (형태소 층 포함) |
 | 규칙 | 문자열 41개 + 형태소 2개. 예시 202개, 반례 96개가 테스트로 강제됨 |
 | 테스트 | 456개 |
-| 검사 속도 | 2,150자 **0.58ms** (형태소 층 초기화 101ms, 크롬 실측) |
+| 검사 속도 | 1층 **0.10ms/1,000자** · 형태소 층 19ms/1,000자 (`npm run bench`) |
+| 형태소 층 초기화 | 70~101ms, 한 번만 (크롬 실측) |
 | 번들 | 코어 minified 85 kB · **gzip 18.5 kB**, 런타임 의존성 0개 |
 
 ```bash
@@ -105,6 +106,8 @@ npm run typecheck               # 코어·데모·확장 전부
 npm run golden:report           # 골든 성적표 (1층만)
 npm run golden:report -- --morph  # 형태소 층까지 켜고
 npm run build:extension         # 크롬 확장 → apps/extension/dist
+npm run bench                   # 성능 측정 (--morph로 형태소 층 포함)
+npm run pack:extension          # 배포용 zip → apps/extension/release/
 npm run probe:sync              # garu-ko 실측 하네스 에셋 동기화
 ```
 
