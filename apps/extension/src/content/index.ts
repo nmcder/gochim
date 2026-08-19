@@ -38,6 +38,13 @@ interface Session {
   spellcheckWas: string | null
   /** 저절로 띄운 카드가 가리키는 진단. 커서가 벗어나면 닫는다. */
   suggested: Diagnostic | null
+  /**
+   * 글 전체를 훑은 결과. 창(4,000자) 밖까지 포함한다.
+   *
+   * 글이 바뀔 때마다 비우고, '모두 고치기'를 보여 주거나 누를 때만 채운다.
+   * 타자마다 전체를 훑지 않으려는 것이다.
+   */
+  whole: Diagnostic[] | null
 }
 
 /**
@@ -111,7 +118,7 @@ function suggestAtCaret(): void {
   const rect = session.layer.rectOf(hit)
   if (!rect) return
   session.suggested = hit
-  popover.show(hit, rect, { compact: true, acceptKey: settings.acceptKey, total: session.diagnostics.length })
+  popover.show(hit, rect, { compact: true, acceptKey: settings.acceptKey, total: wholeDiagnostics().length })
 }
 
 /**
@@ -143,14 +150,15 @@ function autoFix(): boolean {
  */
 function wholeDiagnostics(): Diagnostic[] {
   if (!session || !settings?.enabled || !ignoreStore) return []
+  if (session.whole) return session.whole
   const text = session.target.getText()
   // 창 안에 다 들어오는 글이면 이미 검사해 둔 결과가 곧 전체다. 형태소 층까지 합쳐져 있다.
-  if (text.length <= WINDOW_SIZE) return session.diagnostics
-  return check(text, {
+  if (text.length <= WINDOW_SIZE) return (session.whole = session.diagnostics)
+  return (session.whole = check(text, {
     ignore: ignoreStore.keys(),
     minConfidence: settings.minConfidence,
     ...(settings.categories.length > 0 ? { categories: settings.categories } : {}),
-  })
+  }))
 }
 
 /**
@@ -271,6 +279,7 @@ function runCheck(): void {
   session.base = shifted
   // 글이 바뀌었으니 이전 형태소 결과는 위치가 어긋난다. 새 결과가 올 때까지 비워 둔다.
   session.morph = []
+  session.whole = null
   paint()
 
   if (autoFix()) {
@@ -316,6 +325,7 @@ function attach(target: EditableTarget): void {
     timer: 0,
     spellcheckWas,
     suggested: null,
+    whole: null,
   }
   scheduleCheck(0)
 }
@@ -343,7 +353,7 @@ document.addEventListener(
       return
     }
     const rect = session.layer.rectOf(hit)
-    if (rect) popover.show(hit, rect, { total: session.diagnostics.length })
+    if (rect) popover.show(hit, rect, { total: wholeDiagnostics().length })
   },
   true,
 )

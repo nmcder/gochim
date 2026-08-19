@@ -464,7 +464,111 @@ export const malSpacing = defineRule({
   counterExamples: ['그건 빈말이 아니었다.', '헛말이라도 고맙다.'],
 })
 
+/**
+ * 단위 명사 뒤에 오는 위치·시간 명사 `뒤·후·전`.
+ *
+ * `몇분뒤에`는 붙은 자리가 두 군데인데 `myeot-beon`은 앞쪽 `몇분`만 갈라 놓는다.
+ * 여기서는 **수 표현 + 단위 명사 + 위치 명사**를 한 덩어리로 보고 남은 자리까지 띄운다.
+ *
+ * `뒤·후·전`은 모두 명사라 앞말과 띄어 쓰는 게 맞지만, 한자어 안에 워낙 흔히 들어 있다
+ * (오후·이후·직후·향후 / 오전·이전·사전·직전). 그래서 **앞에 수 표현과 단위 명사가
+ * 나란히 놓였을 때만** 잡는다. 뒤에 이어지는 말도 조사·서술격으로 한정해
+ * `뒤통수·뒤늦다·전화·전부·후배`처럼 위치 명사가 합성어의 앞 음절인 경우를 피한다.
+ *
+ * 아라비아 숫자와 단위 명사는 붙여 쓸 수 있으므로(제43항 다만) `3일후에`는
+ * `3일`을 건드리지 않고 `후` 앞만 띄운다. 이때 오류 구간을 좁히려고 offset/length를 쓴다.
+ */
+const UNIT_NUMERALS = '몇|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|스무|\\d+'
+const TIME_UNITS = '분|시간|초|일|주|달|개월|년'
+const POSITION_NOUNS = '뒤|후|전'
+
+/** `몇` 뒤에 올 수 있는 단위. `몇일`은 `며칠`이 맞으므로 `일`을 뺐다. */
+const UNIT_AFTER_MYEOT = new Set(['분', '시간', '초', '주', '달', '개월', '년'])
+/** 고유어 수관형사 뒤에 올 수 있는 단위. `한일(韓日)·한주·한년`을 피하려고 좁게 잡았다. */
+const UNIT_AFTER_NATIVE = new Set(['분', '시간', '초', '달'])
+/** 숫자 뒤에 올 수 있는 단위. */
+const UNIT_AFTER_DIGIT = new Set(['분', '시간', '초', '일', '주', '달', '개월', '년'])
+
+/** 위치 명사 뒤에 이어져도 좋은 첫 음절. 조사이거나 서술격 조사의 활용형이다. */
+const AFTER_POSITION = new Set([
+  '에', '의', '는', '도', '로', '만', '라', '가', '를', '와', '랑', '이', '나', '였', '예', '입', '면',
+])
+
+export const unitPositionNoun = defineRule({
+  id: 'unit-position-noun',
+  category: 'spacing',
+  confidence: 0.94,
+  pattern: new RegExp(`(?<![가-힣0-9])(${UNIT_NUMERALS})( ?)(${TIME_UNITS})(${POSITION_NOUNS})`, 'g'),
+  resolve(ctx) {
+    const [, numeral = '', gap = '', unit = '', position = ''] = ctx.match
+
+    const isDigit = /^\d+$/.test(numeral)
+    const allowed = isDigit
+      ? UNIT_AFTER_DIGIT
+      : numeral === '몇'
+        ? UNIT_AFTER_MYEOT
+        : UNIT_AFTER_NATIVE
+    if (!allowed.has(unit)) return null
+
+    // 위치 명사가 합성어의 앞 음절인 경우를 막는다 — 전화·전부·후배·뒤통수.
+    const rest = ctx.text.slice(ctx.index + ctx.match[0].length)
+    const next = rest.slice(0, 1)
+    if (/[가-힣]/.test(next) && !AFTER_POSITION.has(next) && !/^(?:부터|까지)/.test(rest)) return null
+
+    // 숫자 + 단위는 붙여 쓸 수 있고, 이미 띄어져 있으면 남은 자리만 고치면 된다.
+    if (isDigit || gap) {
+      return {
+        suggestions: [`${unit} ${position}`],
+        offset: numeral.length + gap.length,
+        length: unit.length + position.length,
+        message: `'${position}'은 명사이므로 앞의 단위 명사와 띄어 씁니다.`,
+        explain:
+          "'뒤·후(後)·전(前)'은 모두 명사입니다. '오후·직후·이전'처럼 한자어 안에 들어 있을 때만 붙여 쓰고, 시간의 앞뒤를 가리킬 때는 앞말과 띄어 씁니다.",
+        refs: ['한글 맞춤법 제2항'],
+      }
+    }
+
+    return {
+      suggestions: [`${numeral} ${unit} ${position}`],
+      message: `단위 명사와 '${position}'은 각각 띄어 씁니다.`,
+      explain:
+        "'몇 분 뒤'는 관형사·단위 명사·명사가 이어진 세 단어입니다. 단위 명사는 수관형사와 띄어 쓰고(제43항), '뒤·후·전'도 명사라 다시 띄어 씁니다.",
+      refs: ['한글 맞춤법 제43항'],
+    }
+  },
+  examples: [
+    { wrong: '몇분뒤에 친구한테 답장이 왔다.', right: '몇 분 뒤에 친구한테 답장이 왔다.' },
+    { wrong: '몇 분뒤에 답장이 왔다.', right: '몇 분 뒤에 답장이 왔다.' },
+    { wrong: '한시간뒤에 다시 연락할게.', right: '한 시간 뒤에 다시 연락할게.' },
+    { wrong: '수술은 3일후에 받기로 했다.', right: '수술은 3일 후에 받기로 했다.' },
+    { wrong: '10년전에 찍은 사진이 나왔다.', right: '10년 전에 찍은 사진이 나왔다.' },
+    { wrong: '두시간전부터 기다리고 있었다.', right: '두 시간 전부터 기다리고 있었다.' },
+    { wrong: '몇달뒤면 졸업이다.', right: '몇 달 뒤면 졸업이다.' },
+  ],
+  counterExamples: [
+    '내일 오후에 사무실에서 뵐게요.',
+    '내일 오전에 교수님을 뵈러 갑니다.',
+    '전쟁 직후 사회는 극심한 혼돈에 빠졌다.',
+    '제출 전에 오탈자를 꼼꼼히 확인했다.',
+    '사전에 협의된 내용대로 진행하겠습니다.',
+    '이번 시상식에서 신인상 부문 후보에 올랐다.',
+    '친구들에게 뒤처지지 않으려고 매일 복습했습니다.',
+    '동생 뒤치다꺼리하느라 하루가 다 갔다.',
+    '9회 말 역전을 앞두고 관중이 모두 일어섰다.',
+    '전후 사정을 자세히 살폈다.',
+    '한일전이 열리는 날이라 일찍 퇴근했다.',
+    '3일전화를 걸었지만 받지 않았다.',
+    '5분후반전이 시작되었다.',
+    '2020년전후로 분위기가 크게 달라졌다.',
+    '한 시간 뒤에 다시 연락할게.',
+    '3일 후에 결과가 나온다.',
+    '십분 이해가 간다.',
+    '세분화된 기준이 필요하다.',
+  ],
+})
+
 export const proseSpacingRules: Rule[] = [
+  unitPositionNoun,
   nnbGeotBare,
   nnbTtae,
   anhVsAn,
