@@ -12,6 +12,9 @@ tools/probe/models/
 tools/probe/dist/
 tools/probe/*.txt
 
+# Claude Code 세션 부산물
+.claude/
+
 .DS_Store
 Thumbs.db
 .idea/
