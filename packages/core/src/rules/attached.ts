@@ -132,4 +132,52 @@ export const eomiAttached = defineRule({
   counterExamples: ['저는 맡은 일을 했을 뿐입니다.'],
 })
 
-export const attachedRules: Rule[] = [josaSpaced, josaBakke, eomiLji, eomiAttached]
+/**
+ * 인용격 조사 `라고·이라고·라는·이라는`.
+ *
+ * 남의 말을 옮길 때 쓰는 조사라 앞말에 붙는다. 그런데 인용한 말이 문장처럼 길다 보니
+ * 거기서 한 번 끊고 싶어져서 `조심할게 라고 카톡을 보냈다`처럼 띄어 쓰는 일이 잦다.
+ *
+ * 이 자리는 다른 조사보다 오히려 안전하다. `라고`로 시작하는 말 자체가 거의 없기 때문이다.
+ * 뒤에 한글이 더 붙는 경우(라고스 같은 지명)만 빼면 띄어 쓴 `라고`는 사실상 전부 조사다.
+ *
+ * 따옴표로 닫은 인용도 같이 받는다 — `"미안해" 라고` → `"미안해"라고`.
+ *
+ * 앞 글자를 매치에 넣지 않는 것이 중요하다. `조심할께 라고`에서는 `께→게`도 같이 틀렸는데,
+ * 두 진단의 구간이 겹치면 엔진이 확신도가 높은 하나만 남긴다. 공백부터 매치를 시작하면
+ * 두 오류가 각자 자기 자리를 차지해 둘 다 살아남는다.
+ */
+const QUOTE_END = /[가-힣0-9\p{Ll}\p{Lu}"'”’」』\]）)]/u
+
+export const josaRago = defineRule({
+  id: 'josa-rago',
+  category: 'spacing',
+  confidence: 0.92,
+  pattern: /(?<=\S)[ \t]+(이라고|라고|이라는|라는)(?![가-힣])/g,
+  resolve(ctx) {
+    const [, josaText = ''] = ctx.match
+    const prev = ctx.text[ctx.index - 1] ?? ''
+    if (!QUOTE_END.test(prev)) return null
+    // `이라고·이라는`의 `이-`는 받침 있는 말 뒤에만 붙는다. 받침이 없으면 원래 `라고`가 맞다.
+    if (josaText.startsWith('이') && /[가-힣]/.test(prev) && finalOf(prev) === '') return null
+    return {
+      suggestions: [josaText],
+      message: `인용격 조사 '${josaText}'는 앞말에 붙여 씁니다.`,
+      explain: "'라고·이라고'는 남의 말을 옮길 때 쓰는 조사입니다. 조사는 앞말에 붙여 씁니다.",
+      refs: ['한글 맞춤법 제41항'],
+    }
+  },
+  examples: [
+    { wrong: '다음부터는 조심할게 라고 카톡을 보냈다.', right: '다음부터는 조심할게라고 카톡을 보냈다.' },
+    { wrong: '친구가 나도 미안해 라고 답장을 보내왔다.', right: '친구가 나도 미안해라고 답장을 보내왔다.' },
+    { wrong: '그는 끝까지 모르겠다 라는 말만 했다.', right: '그는 끝까지 모르겠다라는 말만 했다.' },
+  ],
+  counterExamples: [
+    '조금만 기다리라고 했잖아.',
+    '이건 사과라고 부른다.',
+    '나이지리아의 라고스는 큰 도시다.',
+    '무슨 소리냐고 되물었다.',
+  ],
+})
+
+export const attachedRules: Rule[] = [josaSpaced, josaBakke, eomiLji, eomiAttached, josaRago]
