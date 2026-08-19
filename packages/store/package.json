@@ -41,5 +41,14 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kkwki/gochim.git",
+    "directory": "packages/store"
+  },
+  "homepage": "https://github.com/kkwki/gochim#readme",
+  "bugs": {
+    "url": "https://github.com/kkwki/gochim/issues"
   }
 }

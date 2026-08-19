@@ -18,7 +18,8 @@
     "probe:sync": "node scripts/sync-probe.mjs",
     "golden:build": "node scripts/build-golden.mjs",
     "rules:doc": "npm run build -w @gochim/core && node scripts/rules-doc.mjs",
-    "build:extension": "npm run build -w @gochim/extension"
+    "build:extension": "npm run build -w @gochim/extension",
+    "pack:extension": "npm run build -w @gochim/extension && node apps/extension/scripts/pack.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
@@ -28,5 +29,9 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kkwki/gochim.git"
   }
 }
