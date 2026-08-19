@@ -57,6 +57,28 @@
     </section>
 
     <section>
+      <h2>적대적 CSS — 거울 레이어 정렬</h2>
+      <p class="lede">
+        남의 페이지가 어떤 타이포그래피를 쓸지 모릅니다. 글자 크기·자간·행간·여백·테두리를 전부 비틀어 놓고
+        밑줄이 여전히 글자 위에 오는지 봅니다. 여기가 어긋나면 확장 전체가 못 쓰게 됩니다.
+      </p>
+      <textarea id="hostile" style="
+        font-family: 'Times New Roman', serif;
+        font-size: 21px;
+        line-height: 2.4;
+        letter-spacing: 2.5px;
+        word-spacing: 6px;
+        padding: 26px 34px 10px 18px;
+        border: 6px dashed #c2402d;
+        border-radius: 0;
+        min-height: 160px;
+      ">
+어제는 정말 어의없는 일이 있었어. 몇일 뒤에 다시 연락 준다더니.
+이렇게 하면 안 되요. 나도 할수있는 만큼은 다 했을뿐이야.</textarea
+      >
+    </section>
+
+    <section>
       <h2>contenteditable — CSS Custom Highlight API</h2>
       <div class="rich" id="rich" contenteditable="true">
         그 사람이 그런 말을 했을리가 없어. 신발을 신은채로 들어올 사람이 아니야.
