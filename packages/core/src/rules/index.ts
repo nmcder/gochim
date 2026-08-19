@@ -1,6 +1,8 @@
 import type { Rule } from '../types.js'
 import { anAnh, anhAlone, bojoJiAnh, jiAnh } from './an.js'
 import { attachedRules } from './attached.js'
+import { bojoRules } from './bojo.js'
+import { busaRules } from './busa.js'
 import { doeDwae, doeSentenceFinal, dwaeJiAnh } from './doe.js'
 import { endingRules } from './endings.js'
 import { confusable, lexicon } from './lexicon.js'
@@ -16,6 +18,8 @@ import { spacingRules } from './spacing.js'
 
 export * from './an.js'
 export * from './attached.js'
+export * from './bojo.js'
+export * from './busa.js'
 export * from './doe.js'
 export * from './endings.js'
 export * from './lexicon.js'
@@ -57,5 +61,7 @@ export const allRules: Rule[] = [
   ...hanjaRules,
   ...confusablePairRules,
   ...proseSpacingRules,
+  ...bojoRules,
+  ...busaRules,
   ...endingRules,
 ]
