@@ -160,6 +160,76 @@ export const doublePassive = defineRule({
   counterExamples: ['그 계획은 잘 만들어졌습니다.', '합의가 이루어지지 않았습니다.'],
 })
 
+
+/** `-등`으로 끝나는 한 낱말. 나열의 의존명사 '등'과 문자열이 겹친다. */
+const WORD_DEUNG = new Set([
+  '평등', '차등', '균등', '고등', '초등', '중등', '대등', '동등', '열등', '우등',
+  '무등', '상등', '하등', '계등', '불평등', '남등',
+])
+
+export const nnbDeung = defineRule({
+  id: 'nnb-deung',
+  category: 'spacing',
+  confidence: 0.9,
+  pattern: /([가-힣]{2,})등([을이과와의도만])/g,
+  resolve(ctx) {
+    const head = ctx.match[1] ?? ''
+    const josaCh = ctx.match[2] ?? ''
+    // '평등을·고등의'처럼 한 낱말이면 건드리지 않는다. 뒤에서 두 글자만 본다.
+    if (WORD_DEUNG.has(head.slice(-1) + '등') || WORD_DEUNG.has(head.slice(-2) + '등')) return null
+    // 나열의 '등'은 앞에 쉼표가 있다. 이 조건이 없으면 '평등을'류를 전부 훑는다.
+    if (!/[,·]/.test(ctx.text.slice(0, ctx.index))) return null
+    return {
+      suggestions: [`${head} 등${josaCh}`],
+      message: "나열을 뜻하는 '등'은 의존명사라 띄어 씁니다.",
+      explain: "'등(等)'은 의존명사입니다. '평등·고등'처럼 한 낱말의 일부인 '등'과는 다릅니다.",
+      refs: ['한글 맞춤법 제42항'],
+    }
+  },
+  examples: [
+    { wrong: '지원서, 자기소개서, 포트폴리오등을 함께 제출하세요.', right: '지원서, 자기소개서, 포트폴리오 등을 함께 제출하세요.' },
+  ],
+  counterExamples: ['자유, 평등, 박애는 프랑스 혁명의 구호였다.', '고등학교 3년 동안 반장을 맡았다.'],
+})
+
+/** `께서` 주어에는 서술어에도 높임이 와야 한다. */
+const HONORED_VERBS: Record<string, string> = {
+  갔습니다: '가셨습니다',
+  왔습니다: '오셨습니다',
+  했습니다: '하셨습니다',
+  봤습니다: '보셨습니다',
+  먹었습니다: '드셨습니다',
+  말했습니다: '말씀하셨습니다',
+  보냈습니다: '보내셨습니다',
+  줬습니다: '주셨습니다',
+}
+
+export const kkeseoAgreement = defineRule({
+  id: 'kkeseo-agreement',
+  category: 'ending',
+  confidence: 0.9,
+  pattern: new RegExp(`께서\\s*((?:[가-힣]+\\s+){0,3}?)(${Object.keys(HONORED_VERBS).join('|')})`, 'g'),
+  resolve(ctx) {
+    const middle = ctx.match[1] ?? ''
+    const verb = ctx.match[2] ?? ''
+    // 사이에 다른 주어나 절 경계가 있으면 그 주어의 서술어다.
+    if (/제가|저는|저희|이가|가\s|은\s|는\s|니까|테니|어서|아서|으면/.test(middle)) return null
+    const honored = HONORED_VERBS[verb]
+    if (!honored) return null
+    return {
+      suggestions: [honored],
+      offset: ctx.match[0].length - verb.length,
+      length: verb.length,
+      message: "'께서'가 주어면 서술어에도 높임을 씁니다.",
+      explain:
+        "주격 조사 '께서'는 주어를 높이는 형태입니다. 서술어에 '-시-'를 넣지 않으면 높임이 반쪽만 됩니다.",
+      refs: ['표준 언어 예절'],
+    }
+  },
+  examples: [{ wrong: '사장님께서 방금 회의실로 갔습니다.', right: '사장님께서 방금 회의실로 가셨습니다.' }],
+  counterExamples: ['사장님께서 부르셔서 제가 회의실로 갔습니다.'],
+})
+
 export const formalRules: Rule[] = [
   jeOrdinal,
   garyangSuffix,
@@ -168,4 +238,6 @@ export const formalRules: Rule[] = [
   geotIbnida,
   dahada,
   doublePassive,
+  nnbDeung,
+  kkeseoAgreement,
 ]
