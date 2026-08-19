@@ -117,6 +117,11 @@ npm run probe:sync              # garu-ko 실측 하네스 에셋 동기화
 - [x] **Phase 1** — 형태소 층(3층), 무시 사전(IndexedDB), 크롬 확장 MV3 밑줄 오버레이
 - [ ] **Phase 2** — 확장에 형태소 층 연결(Worker 분리), 골든셋 확장, npm 배포, GitHub Releases
 
+## 규칙을 추가하려면
+
+[CONTRIBUTING.md](CONTRIBUTING.md)에 순서가 적혀 있습니다.
+요약하면 **골든셋에 먼저 넣고, 함정 문장을 함께 넣고, 그다음에 규칙을 씁니다.**
+
 ## 설계 기록
 
 1. [garu-ko를 쓰고 0.9.14에 고정한다](docs/decisions/0001-garu-ko-and-bundle-budget.md)
