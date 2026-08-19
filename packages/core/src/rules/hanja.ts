@@ -93,4 +93,98 @@ export const tagae = defineRule({
   counterExamples: ['그 배우는 지난해 타계했다.'],
 })
 
-export const hanjaRules: Rule[] = [jihyang, jego, tagae]
+
+export const siljelo = defineRule({
+  id: 'hanja-silje',
+  category: 'confusable',
+  confidence: 0.9,
+  // 부사 '실제로'와 명사 '실재(實在)'+조사가 문자열이 같다.
+  pattern: /(?<![가-힣])실재로(?=\s)/g,
+  resolve(ctx) {
+    if (insideQuotes(ctx.text, ctx.index)) return null
+    const rest = ctx.text.slice(ctx.index + 4)
+    // '참된 실재로 여기다'처럼 자격·간주 구문이면 '실재로'가 맞다.
+    if (/^\s*(?:[가-힣]+\s+){0,2}(?:간주|여[기겼긴길]|받아들|인정|믿|본|봤|보았)/.test(rest)) return null
+    return {
+      suggestions: ['실제로'],
+      message: "'사실은'의 뜻은 '실제로'입니다.",
+      explain:
+        "'실제(實際)'는 사실의 경우나 형편, '실재(實在)'는 실제로 존재함입니다. 부사로 쓸 때는 '실제로'입니다.",
+    }
+  },
+  examples: [{ wrong: '실재로 만나 보니 사진과 많이 달랐다.', right: '실제로 만나 보니 사진과 많이 달랐다.' }],
+  counterExamples: [
+    '이데아를 참된 실재로 여기는 관점이다.',
+    '철학자들은 이데아를 참된 실재로 여겼다.',
+    '실재론은 관념론과 대립한다.',
+  ],
+})
+
+export const gonyok = defineRule({
+  id: 'hanja-gonyok',
+  category: 'confusable',
+  confidence: 0.92,
+  // '치르다'와 어울리는 것은 '곤욕'이다. '곤혹'은 '느끼다·스럽다'와 어울린다.
+  pattern: /곤혹(?=을\s*(?:치렀|치르|치를))/g,
+  resolve(ctx) {
+    if (insideQuotes(ctx.text, ctx.index)) return null
+    return {
+      suggestions: ['곤욕'],
+      message: "심한 모욕을 겪는 것은 '곤욕'입니다.",
+      explain: "'곤욕(困辱)'은 심한 모욕, '곤혹(困惑)'은 어찌할 바를 몰라 당황함입니다. '곤욕을 치르다'가 짝입니다.",
+    }
+  },
+  examples: [{ wrong: '선배들 앞에서 한바탕 곤혹을 치렀다.', right: '선배들 앞에서 한바탕 곤욕을 치렀다.' }],
+  counterExamples: ['갑작스러운 질문에 곤혹을 느꼈다.', '표정이 곤혹스러워 보였다.'],
+})
+
+/** 전례가 없다는 뜻이 성립하는 주제어. 사건·정도를 나타내는 말이어야 한다. */
+const EVENTS = '사태|사건|참사|위기|호황|폭염|기록|규모|증가세|한파|수치'
+/** 기원을 찾는 대상. 이쪽이면 '유래(由來)'가 맞다. */
+const ORIGINS = /말|표현|어원|지명|이름|풍습|축제|관습|명칭|전설/
+
+export const yurye = defineRule({
+  id: 'hanja-yurye',
+  category: 'confusable',
+  confidence: 0.9,
+  pattern: new RegExp(`(${EVENTS})(?:은|는|이|가)?\\s*(?:[가-힣]+\\s+){0,2}유래(?=를\\s*찾)`, 'g'),
+  resolve(ctx) {
+    if (insideQuotes(ctx.text, ctx.index)) return null
+    const before = ctx.text.slice(Math.max(0, ctx.index - 16), ctx.index)
+    if (ORIGINS.test(before)) return null
+    return {
+      suggestions: ['유례'],
+      offset: ctx.match[0].length - 2,
+      length: 2,
+      message: "전례가 없다는 뜻은 '유례'입니다.",
+      explain: "'유례(類例)'는 같은 종류의 예, '유래(由來)'는 사물이 생겨난 내력입니다. '유례를 찾기 힘들다'가 짝입니다.",
+    }
+  },
+  examples: [{ wrong: '이번 사태는 유래를 찾기 힘든 일이다.', right: '이번 사태는 유례를 찾기 힘든 일이다.' }],
+  counterExamples: ['이 지명은 유래를 찾기 어렵다.', '축제의 유래를 조사했다.'],
+})
+
+/** 기록을 깨는 것은 '경신'이다. 자료를 새로 고치는 것은 '갱신'이다. */
+const RECORDS = '신기록|세계\\s*기록|최고\\s*기록|개인\\s*기록|한국\\s*기록|최고치|최다\\s*기록|대기록'
+
+export const gyeongsin = defineRule({
+  id: 'hanja-gyeongsin',
+  category: 'confusable',
+  confidence: 0.9,
+  pattern: new RegExp(`(${RECORDS})(?:을|를)\\s*갱신`, 'g'),
+  resolve(ctx) {
+    if (insideQuotes(ctx.text, ctx.index)) return null
+    return {
+      suggestions: ['경신'],
+      offset: ctx.match[0].length - 2,
+      length: 2,
+      message: "기록을 새로 세우는 것은 '경신'입니다.",
+      explain:
+        "'경신(更新)'은 종전 기록을 깨는 것, '갱신(更新)'은 계약·자료를 새로 고치는 것입니다. 같은 한자를 쓰지만 쓰임이 갈립니다.",
+    }
+  },
+  examples: [{ wrong: '그는 세계 신기록을 갱신하며 금메달을 땄다.', right: '그는 세계 신기록을 경신하며 금메달을 땄다.' }],
+  counterExamples: ['접속 기록을 갱신한다.', '운전면허를 갱신했다.', '계약을 갱신하기로 했다.'],
+})
+
+export const hanjaRules: Rule[] = [jihyang, jego, tagae, siljelo, gonyok, yurye, gyeongsin]

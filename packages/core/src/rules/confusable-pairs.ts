@@ -70,6 +70,30 @@ const PAIRS: Pair[] = [
     counterExamples: ['시험이 끝나고 친구와 답을 맞춰 보았다.', '가구 색을 벽지에 맞췄다.'],
   },
   {
+    id: 'chae-vs-che',
+    // 상태가 이어지는 것은 '채', 그런 척하는 것은 '체'다.
+    pattern: /(?:신|입|쓰|끼|들|켜|앉|누|묶|열|닫|걸치)(?:은|ㄴ)\s+체(?=[로도는,])/g,
+    deny: /모르는|아는|잘난|못난/,
+    wrong: '체',
+    right: '채',
+    message: "상태가 이어지는 것은 '채'입니다.",
+    explain: "'채'는 이미 있는 상태 그대로, '체'는 그런 척함입니다. 신발을 신은 상태이므로 '신은 채로'입니다.",
+    examples: [{ wrong: '그는 신발을 신은 체로 방에 들어왔다.', right: '그는 신발을 신은 채로 방에 들어왔다.' }],
+    counterExamples: ['모르는 체 딴 데를 보았다.', '아는 체하지 마라.'],
+  },
+  {
+    id: 'deunji-selection',
+    // 부정칭 뒤의 '-던지'는 선택을 뜻하는 '-든지'라야 한다.
+    pattern: /(?:뭐|뭘|무엇을?|어디를?|어디서|누구를?|누가|언제|어떻게|어느)\s+(?:[가-힣]+\s+){0,2}[가-힣]+던지/g,
+    deny: /기억|모르|궁금|생각|몰라/,
+    wrong: '던지',
+    right: '든지',
+    message: '선택을 나타낼 때는 "-든지"입니다.',
+    explain: "'-든지'는 여러 중 어느 것이어도 상관없다는 뜻, '-던지'는 과거를 회상하는 어미입니다.",
+    examples: [{ wrong: '네가 뭘 하던지 나는 응원할게.', right: '네가 뭘 하든지 나는 응원할게.' }],
+    counterExamples: ['그때 뭘 먹었던지 기억이 안 난다.', '어디서 봤던지 생각이 나지 않는다.'],
+  },
+  {
     id: 'munan-vs-muran',
     pattern: new RegExp(`(?:복장|정장|디자인|색|색상|스타일|무늬|옷차림|디자인)(?:은|이|는|가)?\\s*${ADVERBS}문안(?=[하한해했])`, 'g'),
     wrong: '문안',
@@ -88,8 +112,10 @@ export const confusablePairRules: Rule[] = PAIRS.map((pair) =>
     confidence: 0.9,
     pattern: pair.pattern,
     resolve(ctx) {
+      // 판정을 뒤집는 말은 매치 뒤에 오기도 한다 — '뭘 먹었던지 기억이 안 난다'의 '기억'.
+      const window = ctx.match[0] + ctx.text.slice(ctx.index + ctx.match[0].length, ctx.index + ctx.match[0].length + 20)
+      if (pair.deny?.test(window)) return null
       // 바꿀 부분은 언제나 매치의 끝쪽이다.
-      if (pair.deny?.test(ctx.match[0])) return null
       const at = ctx.match[0].lastIndexOf(pair.wrong)
       if (at === -1) return null
       return {
