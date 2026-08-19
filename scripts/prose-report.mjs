@@ -96,6 +96,49 @@ for (const para of corpus.paragraphs) {
   })
 }
 
+/**
+ * '모두 고치기'를 누른 것과 똑같이 전부 적용하고 정답과 통째로 견준다.
+ *
+ * 구간 겹침으로만 세면 점수가 후하게 나온다. `몇분뒤에`를 `몇 분뒤에`까지만 고쳐도
+ * 겹치기 때문에 잡은 것으로 세지만, 사용자 눈에는 여전히 틀린 글이 남는다.
+ * 확장의 '모두 고치기'가 생긴 뒤로는 이쪽이 진짜 성적이다.
+ */
+function applyAll(source, diagnostics) {
+  let out = source
+  let earliest = Number.POSITIVE_INFINITY
+  for (const d of [...diagnostics].sort((a, b) => b.start - a.start)) {
+    if (d.suggestions[0] == null) continue
+    if (d.end > earliest) continue // 겹치는 진단은 뒤엣것만 쓴다 — 확장과 같은 규칙
+    out = out.slice(0, d.start) + d.suggestions[0] + out.slice(d.end)
+    earliest = d.start
+  }
+  return out
+}
+
+/** 어절 단위로 견준다. 글자 단위 거리는 사람이 읽고 판단하기 어렵다. */
+function wordDiff(got, want) {
+  const a = got.split(/\s+/).filter(Boolean)
+  const b = want.split(/\s+/).filter(Boolean)
+  const same = new Set()
+  let i = 0
+  for (const word of b) {
+    const at = a.indexOf(word, i)
+    if (at !== -1) {
+      same.add(at)
+      i = at + 1
+    }
+  }
+  return { matched: same.size, wanted: b.length, leftover: b.filter((w) => !a.includes(w)) }
+}
+
+let exactParas = 0
+const residue = []
+for (const para of corpus.paragraphs) {
+  const fixed = applyAll(para.source, run(para.source))
+  if (fixed === para.corrected) exactParas += 1
+  else residue.push({ index: para.index + 1, ...wordDiff(fixed, para.corrected) })
+}
+
 const bar = (ratio) => '█'.repeat(Math.round(ratio * 20)).padEnd(20, '·')
 
 console.log()
@@ -103,6 +146,14 @@ console.log(`실문 성적표${useMorph ? ' (형태소 층 포함)' : ' (1층만
 console.log('='.repeat(64))
 console.log(`표본  문단 ${corpus.paragraphs.length}개 · ${corpus.paragraphs.reduce((n, p) => n + p.source.length, 0)}자 · 정답 오류 ${total}건`)
 console.log(`검출 ${hit}건 · 재현율 ${(hit / total).toFixed(4)} · 정답에 없는 지적 ${extra}건`)
+
+const wantedWords = residue.reduce((n, r) => n + r.wanted, 0)
+const matchedWords = residue.reduce((n, r) => n + r.matched, 0)
+const perfect = corpus.paragraphs.length - residue.length
+console.log(
+  `모두 고치기 후 정답과 완전히 같은 문단 ${perfect}/${corpus.paragraphs.length}` +
+    (residue.length > 0 ? ` · 나머지 문단의 어절 일치 ${(matchedWords / wantedWords).toFixed(4)}` : ''),
+)
 console.log('='.repeat(64))
 console.log()
 console.log('분류별')
@@ -130,6 +181,16 @@ if (partials.length > 0) {
   console.log()
   console.log(`구간은 잡았으나 제안이 정답과 다른 것 ${partials.length}건`)
   for (const p of partials) console.log(`  ${p.wrongText} → 제안 "${p.partial}" / 정답 "${p.rightText}"`)
+}
+
+if (residue.length > 0) {
+  console.log()
+  console.log('모두 고쳐도 정답과 다른 문단 — 남은 어절')
+  for (const r of residue) {
+    console.log(`  문단 ${r.index}  일치 ${r.matched}/${r.wanted}`)
+    for (const word of r.leftover.slice(0, 8)) console.log(`        빠짐: ${word}`)
+    if (r.leftover.length > 8) console.log(`        … 외 ${r.leftover.length - 8}개`)
+  }
 }
 
 if (extras.length > 0) {

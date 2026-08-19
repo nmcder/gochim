@@ -3,6 +3,7 @@ import { offsetOf, toEditable, type EditableTarget } from './editable.js'
 import { createPopover } from './popover.js'
 import { createMorphClient, type MorphClient } from './morph-client.js'
 import { createUnderlineLayer, type UnderlineLayer } from './underline.js'
+import { toast } from './toast.js'
 import { loadSettings, onSettingsChanged, type Settings } from '../shared/settings.js'
 import { openIgnoreStore, type IgnoreStore } from '@gochim/store'
 
@@ -110,7 +111,7 @@ function suggestAtCaret(): void {
   const rect = session.layer.rectOf(hit)
   if (!rect) return
   session.suggested = hit
-  popover.show(hit, rect, { compact: true, acceptKey: settings.acceptKey })
+  popover.show(hit, rect, { compact: true, acceptKey: settings.acceptKey, total: session.diagnostics.length })
 }
 
 /**
@@ -134,6 +135,76 @@ function autoFix(): boolean {
   return true
 }
 
+/**
+ * 글 전체의 오류. 평소 검사는 커서 주변 4,000자만 보지만 여기서는 끝까지 본다.
+ *
+ * 자동 고침은 **커서가 지나간 자리만** 손대므로 이미 써 둔 글에는 아무 일도 하지 않는다.
+ * 옛날에 쓴 글을 통째로 고치고 싶을 때 쓰는 것이 이쪽이다.
+ */
+function wholeDiagnostics(): Diagnostic[] {
+  if (!session || !settings?.enabled || !ignoreStore) return []
+  const text = session.target.getText()
+  // 창 안에 다 들어오는 글이면 이미 검사해 둔 결과가 곧 전체다. 형태소 층까지 합쳐져 있다.
+  if (text.length <= WINDOW_SIZE) return session.diagnostics
+  return check(text, {
+    ignore: ignoreStore.keys(),
+    minConfidence: settings.minConfidence,
+    ...(settings.categories.length > 0 ? { categories: settings.categories } : {}),
+  })
+}
+
+/**
+ * 겹치지 않는 진단만 **뒤에서 앞으로** 골라낸다.
+ *
+ * 앞부터 고치면 첫 교정에서 길이가 달라지는 순간 뒤쪽 오프셋이 전부 밀린다.
+ * 뒤에서부터 고치면 아직 안 건드린 앞쪽 구간의 위치는 그대로다.
+ */
+function fixPlan(found: Diagnostic[], text: string): Diagnostic[] {
+  const plan: Diagnostic[] = []
+  let earliest = Number.POSITIVE_INFINITY
+  for (const d of [...found].sort((a, b) => b.start - a.start)) {
+    if (d.suggestions[0] == null) continue
+    if (d.end > earliest) continue // 앞 진단과 겹친다 — 뒤엣것을 이미 골랐으므로 버린다
+    // 진단을 만든 뒤 글이 바뀌었을 수 있다. 다른 자리를 고치는 사고를 막는다.
+    if (text.slice(d.start, d.end) !== d.text) continue
+    plan.push(d)
+    earliest = d.start
+  }
+  return plan
+}
+
+/** '모두 고치기'가 실제로 고친 건수. 0이면 아무것도 하지 않았다. */
+function fixAll(): number {
+  if (!session) return 0
+  const text = session.target.getText()
+  const plan = fixPlan(wholeDiagnostics(), text)
+  if (plan.length === 0) return 0
+
+  if (session.target.kind === 'field') {
+    // textarea·input은 값이 문자열 하나다. 한 번에 갈아 끼우면 되돌리기도 한 번에 된다.
+    // 열 곳을 고치고 Ctrl+Z를 열 번 눌러야 한다면 되돌린다는 느낌이 들지 않는다.
+    let next = text
+    let caret = caretOf(session.target)
+    for (const d of plan) {
+      const replacement = d.suggestions[0] ?? ''
+      next = next.slice(0, d.start) + replacement + next.slice(d.end)
+      // 커서 앞쪽이 짧아지거나 길어진 만큼 커서도 따라 움직여야 제자리에 남는다.
+      if (d.end <= caret) caret += replacement.length - (d.end - d.start)
+    }
+    session.target.replaceRange(0, text.length, next)
+    const field = session.target.element as HTMLTextAreaElement | HTMLInputElement
+    const clamped = Math.max(0, Math.min(caret, next.length))
+    field.setSelectionRange(clamped, clamped)
+  } else {
+    // contenteditable은 값이 DOM 트리다. 통째로 갈아 끼우면 굵은 글씨도 링크도 다 날아간다.
+    // 한 곳씩 바꿔서 주변 마크업을 살린다.
+    for (const d of plan) session.target.replaceRange(d.start, d.end, d.suggestions[0] ?? '')
+  }
+
+  scheduleCheck(0)
+  return plan.length
+}
+
 let session: Session | null = null
 
 const popover = createPopover({
@@ -146,6 +217,10 @@ const popover = createPopover({
   async onIgnore(diagnostic) {
     await ignoreStore?.add(diagnostic)
     scheduleCheck(0)
+  },
+  onApplyAll() {
+    const fixed = fixAll()
+    if (fixed > 0) toast(`${fixed}곳을 고쳤습니다`)
   },
 })
 
@@ -268,7 +343,7 @@ document.addEventListener(
       return
     }
     const rect = session.layer.rectOf(hit)
-    if (rect) popover.show(hit, rect)
+    if (rect) popover.show(hit, rect, { total: session.diagnostics.length })
   },
   true,
 )
@@ -316,6 +391,20 @@ document.addEventListener('selectionchange', () => {
     popover.hide()
   }
 })
+
+// 밑줄을 클릭하지 않고도 글 전체를 훑을 수 있게 단축키를 하나 둔다.
+// Alt를 섞어 두면 편집기가 자체적으로 쓰는 조합과 부딪히지 않는다.
+document.addEventListener(
+  'keydown',
+  (event) => {
+    if (!session || !event.altKey || !event.shiftKey || event.key.toLowerCase() !== 'f') return
+    event.preventDefault()
+    event.stopPropagation()
+    const fixed = fixAll()
+    toast(fixed > 0 ? `${fixed}곳을 고쳤습니다` : '고칠 것이 없습니다')
+  },
+  true,
+)
 
 // 편집기가 통째로 사라지는 경우(SPA 이동)에 매달린 레이어를 정리한다.
 new MutationObserver(() => {

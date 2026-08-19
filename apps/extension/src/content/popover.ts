@@ -43,11 +43,15 @@ const STYLE = `
 }
 .btn--primary { background: #16150f; border-color: #16150f; color: #fff; font-weight: 600; }
 .btn--quiet { background: transparent; border-color: transparent; opacity: 0.65; }
+/* 되돌릴 수 있는 일이지만 한 번에 여러 곳을 바꾼다. 주 버튼과 헷갈리지 않게 테두리만 준다. */
+.btn--all { margin-left: auto; font-weight: 600; }
 `
 
 export interface PopoverActions {
   onApply(diagnostic: Diagnostic): void
   onIgnore(diagnostic: Diagnostic): void
+  /** 글 전체의 오류를 한 번에 고친다. */
+  onApplyAll(): void
 }
 
 export interface ShowOptions {
@@ -60,6 +64,13 @@ export interface ShowOptions {
   compact?: boolean
   /** 제안을 받아들이는 키. 카드에 안내로 적는다. */
   acceptKey?: string
+  /**
+   * 글 전체에 남아 있는 오류 수.
+   *
+   * 2건 이상일 때만 '모두 고치기'를 띄운다. 하나뿐인데 '모두'라고 적으면
+   * 무엇이 더 고쳐지는지 알 수 없어 누르기가 무섭다.
+   */
+  total?: number
 }
 
 export interface Popover {
@@ -176,6 +187,21 @@ export function createPopover(actions: PopoverActions): Popover {
       const actionRow = document.createElement('div')
       actionRow.className = 'actions'
       actionRow.append(applyButton, ignoreButton)
+
+      // 오래 쓴 글에는 오류가 수십 개씩 쌓여 있다. 하나씩 누르게 하면 아무도 끝까지 하지 않는다.
+      const total = options.total ?? 0
+      if (total > 1) {
+        const allButton = document.createElement('button')
+        allButton.className = 'btn btn--all'
+        allButton.textContent = `모두 고치기 ${total}`
+        allButton.title = '글 전체에서 찾은 오류를 한 번에 고칩니다. Ctrl+Z로 되돌릴 수 있습니다.'
+        allButton.addEventListener('click', () => {
+          hide()
+          actions.onApplyAll()
+        })
+        actionRow.append(allButton)
+      }
+
       card.append(actionRow)
 
       card.hidden = false
