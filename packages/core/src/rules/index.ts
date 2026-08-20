@@ -7,6 +7,7 @@ import { bojoBodaRules } from './bojo-boda.js'
 import { nnbGeoRules } from './nnb-geo.js'
 import { seosulHadaRules } from './seosul-hada.js'
 import { principleRules } from './principle.js'
+import { pyogiRules } from './pyogi.js'
 import { doeDwae, doeSentenceFinal, dwaeJiAnh } from './doe.js'
 import { endingRules } from './endings.js'
 import { confusable, lexicon } from './lexicon.js'
@@ -28,6 +29,7 @@ export * from './bojo-boda.js'
 export * from './nnb-geo.js'
 export * from './seosul-hada.js'
 export * from './principle.js'
+export * from './pyogi.js'
 export * from './doe.js'
 export * from './endings.js'
 export * from './lexicon.js'
@@ -75,5 +77,6 @@ export const allRules: Rule[] = [
   ...nnbGeoRules,
   ...seosulHadaRules,
   ...principleRules,
+  ...pyogiRules,
   ...endingRules,
 ]
