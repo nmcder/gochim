@@ -24,20 +24,25 @@ const STYLE = `
   word-break: keep-all;
 }
 /*
- * 어느 카드가 누구 것인지 밝히는 머리글.
+ * 어느 카드가 누구 것인지 밝히는 이름표.
  *
  * 확장을 깔면 남의 사이트 위에 우리 UI가 뜬다. 사이트가 원래 해 주는 기능인지
  * 확장이 하는 일인지 구별할 방법이 없으면, 안 되는 걸 사이트 탓으로 돌리거나
  * 반대로 사이트 기능을 우리가 망친 줄 안다. 이름을 달아 두면 그 혼동이 사라진다.
  *
- * 조용해야 한다 — 고칠 말보다 눈에 띄면 안 된다. 그래서 11px에 투명도를 준다.
+ * 처음에는 머리글로 한 줄 얹었는데, 표시 하나 때문에 카드가 세로로 길어졌다.
+ * 타이핑 중에 뜨는 카드는 글을 가리므로 한 줄이 아깝다.
+ * 그래서 교정 표시 줄의 **남는 오른쪽 자리**에 얹는다. 높이가 늘지 않는다.
+ *
+ * 조용해야 한다 — 고칠 말보다 눈에 띄면 안 된다. 그래서 10.5px에 투명도를 준다.
  */
 .brand {
-  display: flex; align-items: center; gap: 5px;
-  margin: -2px 0 8px; padding-bottom: 7px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
-  font-size: 11px; letter-spacing: 0.02em; font-weight: 600;
-  color: #16150f; opacity: 0.42;
+  display: flex; align-items: center; gap: 4px;
+  margin-left: auto; padding-left: 10px;
+  font-size: 10.5px; letter-spacing: 0.02em; font-weight: 600;
+  color: #16150f; opacity: 0.38;
+  /* 고칠 말이 길면 줄바꿈에 밀리되, 이름표 자체는 쪼그라들지 않게 한다. */
+  flex: none;
 }
 .brand svg { display: block; flex: none; }
 .swap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; font-size: 15px; }
@@ -76,7 +81,7 @@ const STYLE = `
   .btn--primary { background: #f2efe6; color: #16150f; }
   .btn--quiet { background: transparent; color: #f2efe6; }
   .btn--all { background: transparent; color: #f2efe6; border-color: rgba(255, 255, 255, 0.45); }
-  .brand { color: #f2efe6; border-bottom-color: rgba(255, 255, 255, 0.1); }
+  .brand { color: #f2efe6; }
 }
 
 `
@@ -87,9 +92,9 @@ const STYLE = `
  * 물결 밑줄이 이 제품의 얼굴이라 그것을 그대로 그린다 — 글 두 줄과 그 아래 물결.
  * 인라인 SVG라 파일도 요청도 늘지 않는다.
  */
-const BRAND_MARK = `<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3 4.2h10M3 7.2h6.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M2.6 11.6q1.2-1.7 2.4 0t2.4 0 2.4 0 2.4 0" fill="none" stroke="#cc3f33" stroke-width="1.5" stroke-linecap="round"/></svg>`
+const BRAND_MARK = `<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M3 4.2h10M3 7.2h6.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M2.6 11.6q1.2-1.7 2.4 0t2.4 0 2.4 0 2.4 0" fill="none" stroke="#cc3f33" stroke-width="1.5" stroke-linecap="round"/></svg>`
 
-/** 카드 맨 위의 이름표. 이 UI가 사이트가 아니라 고침의 것임을 밝힌다. */
+/** 교정 표시 줄 오른쪽에 붙는 이름표. 이 UI가 사이트가 아니라 고침의 것임을 밝힌다. */
 function brandRow(): HTMLElement {
   const row = document.createElement('div')
   row.className = 'brand'
@@ -181,8 +186,6 @@ export function createPopover(actions: PopoverActions): Popover {
       card.replaceChildren()
       current = diagnostic
 
-      card.append(brandRow())
-
       const swap = document.createElement('div')
       swap.className = 'swap'
       const from = document.createElement('span')
@@ -194,7 +197,7 @@ export function createPopover(actions: PopoverActions): Popover {
       const to = document.createElement('span')
       to.className = 'to'
       to.textContent = diagnostic.suggestions[0] ?? ''
-      swap.append(from, arrow, to)
+      swap.append(from, arrow, to, brandRow())
 
       card.append(swap)
 
