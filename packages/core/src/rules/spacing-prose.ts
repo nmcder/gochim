@@ -103,7 +103,7 @@ export const nnbGeotBare = defineRule({
 })
 
 /** `때`와 붙어 한 단어가 된 말. */
-const WORD_TTAE = new Set(['그때', '이때', '저때', '한때', '접때'])
+const WORD_TTAE = new Set(['그때', '이때', '저때', '한때', '접때', '물때', '끼때', '제때'])
 
 export const nnbTtae = defineRule({
   id: 'nnb-ttae',
@@ -278,6 +278,23 @@ const NUMERALS = '한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|스무'
 // '대·판·채·줄'은 뺐다 — 세대(世代)·열대·한판·한줄처럼 한 낱말을 이루는 일이 잦다.
 const COUNTERS = '시간|분|초|살|명|개|권|장|마리|가지|잔|병|그릇|송이|켤레|벌|달|해'
 
+/**
+ * 수관형사 + 단위 명사로 **보이지만** 한 낱말인 말.
+ *
+ * `열병(熱病)`은 `열` + `병(甁)`이 아니고 `한살이`는 `한 살` + `이`가 아니다.
+ * 앞의 두 글자만 보면 갈라지므로 **어절 전체**를 보고 막는다.
+ */
+const COUNTER_COMPOUND = [
+  '한살이', '한마디', '한몫', '한통속', '한걸음', '한자리', '한군데', '한바탕', '한창',
+  '열병', '열차', '열쇠', '열정', '열대', '열기', '열중', '열람', '열거',
+  '세상', '세대', '세월', '세배', '세면', '세제', '세척',
+  '두말', '두목', '두각', '두절', '두둔',
+  '네모', '네발', '다섯손가락',
+  '일생', '일부', '일리', '일종', '일대', '일단', '일말', '일교차',
+  '이상', '이하', '이유', '이후', '이전', '이내', '이래',
+  '삼각', '삼촌', '사방', '사면', '오각', '육각',
+]
+
 export const numeralCounter = defineRule({
   id: 'numeral-counter',
   category: 'spacing',
@@ -286,6 +303,10 @@ export const numeralCounter = defineRule({
   resolve(ctx) {
     const numeral = ctx.match[1] ?? ctx.match[3] ?? ''
     const counter = ctx.match[2] ?? ctx.match[4] ?? ''
+    // 어절 전체를 보고 한 낱말인지 확인한다. '열병에'의 '열병', '한살이를'의 '한살이'.
+    const run = /^[가-힣]+/.exec(ctx.text.slice(ctx.index))?.[0] ?? ''
+    const matched = numeral + counter
+    if (COUNTER_COMPOUND.some((word) => run.startsWith(word) && word.length >= matched.length)) return null
     return {
       suggestions: [`${numeral} ${counter}`],
       message: '단위 명사는 수관형사와 띄어 씁니다.',
@@ -298,7 +319,18 @@ export const numeralCounter = defineRule({
     { wrong: '약속 시간보다 한시간이나 늦었다.', right: '약속 시간보다 한 시간이나 늦었다.' },
     { wrong: '사과 세개를 샀다.', right: '사과 세 개를 샀다.' },
   ],
-  counterExamples: ['한번 해 보자.', '두말할 것 없다.', '세상에 그런 일이.', '세대 간 대화가 필요하다.', '열대 지방의 기후.'],
+  counterExamples: [
+    '한번 해 보자.',
+    '두말할 것 없다.',
+    '세상에 그런 일이.',
+    '세대 간 대화가 필요하다.',
+    '열대 지방의 기후.',
+    '한살이를 마친 곤충을 관찰했다.',
+    '열병에 걸려 앓아누웠다.',
+    '열차가 곧 도착합니다.',
+    '한마디만 하겠다.',
+    '일생에 한 번 있을 기회다.',
+  ],
 })
 
 /** `동안` 앞에 올 수 있는 시간 표현. `그동안·한동안·오랫동안`은 한 단어라 뺀다. */
