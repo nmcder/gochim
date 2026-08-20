@@ -493,7 +493,7 @@ export const busaDa = defineRule({
 
   },
   examples: [
-    { wrong: "아 맞다 니가 빌려준 책 다읽었어.", right: "아 맞다 니가 빌려준 책 다 읽었어." },
+    { wrong: "아 맞다 네가 빌려준 책 다읽었어.", right: "아 맞다 네가 빌려준 책 다 읽었어." },
     { wrong: "남은 밥 다먹었다.", right: "남은 밥 다 먹었다." },
     { wrong: "숙제 다끝났어?", right: "숙제 다 끝났어?" },
   ],

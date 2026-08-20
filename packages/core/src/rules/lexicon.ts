@@ -288,12 +288,14 @@ export const confusable = defineLexicon({
     {
       wrong: '웬지',
       right: '왠지',
+      // 문맥이 필요 없는 확정 오류다. 이 사전의 기본값(경고)보다 한 단계 위로 올린다.
+      severity: 'error',
       explain: "'왠지'는 '왜인지'의 준말입니다. 반대로 '웬'은 '어찌 된'이라는 뜻의 관형사입니다(웬일, 웬만하다).",
       examples: [{ wrong: '웬지 기분이 좋다.', right: '왠지 기분이 좋다.' }],
     },
-    { wrong: '왠만', right: '웬만', explain: "'웬만하다'는 '왜'와 관계없는 말입니다. '왠'은 '왠지'에만 씁니다." },
-    { wrong: '왠일', right: '웬일', explain: "'어찌 된 일'이라는 뜻이라 관형사 '웬'을 씁니다." },
-    { wrong: '왠걸', right: '웬걸', explain: "'웬 것을'이 줄어든 말입니다." },
+    { wrong: '왠만', right: '웬만', severity: 'error', explain: "'웬만하다'는 '왜'와 관계없는 말입니다. '왠'은 '왠지'에만 씁니다." },
+    { wrong: '왠일', right: '웬일', severity: 'error', explain: "'어찌 된 일'이라는 뜻이라 관형사 '웬'을 씁니다." },
+    { wrong: '왠걸', right: '웬걸', severity: 'error', explain: "'웬 것을'이 줄어든 말입니다." },
     {
       wrong: '낳으세요',
       right: '나으세요',
@@ -323,7 +325,7 @@ export const confusable = defineLexicon({
       wrong: '바램',
       right: '바람',
       when: (ctx) =>
-        '은는이가을'.includes(ctx.after) && !near(/색|햇빛|볕|원단|천|염색|잉크/)(ctx),
+        '은는이가을입였'.includes(ctx.after) && !near(/색|햇빛|볕|원단|천|염색|잉크/)(ctx),
       explain: "'바라다'의 명사형은 '바람'입니다. '바래다'는 빛깔이 옅어진다는 뜻입니다.",
       examples: [{ wrong: '제 바램은 도움이 되는 것입니다.', right: '제 바람은 도움이 되는 것입니다.' }],
       counterExamples: ['오래된 사진이 누렇게 바랬다.', '이 원단은 햇빛에 오래 두어도 색 바램이 거의 없다.'],

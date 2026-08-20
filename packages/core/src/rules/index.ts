@@ -14,6 +14,7 @@ import { eomiHwaryongRules } from './eomi-hwaryong.js'
 import { unitMoreRules } from './unit-more.js'
 import { anMotRules } from './an-mot.js'
 import { honorificHanjaRules } from './honorific-hanja.js'
+import { pyogiMoreRules } from './pyogi-more.js'
 import { doeDwae, doeSentenceFinal, dwaeJiAnh } from './doe.js'
 import { endingRules } from './endings.js'
 import { confusable, lexicon } from './lexicon.js'
@@ -42,6 +43,7 @@ export * from './eomi-hwaryong.js'
 export * from './unit-more.js'
 export * from './an-mot.js'
 export * from './honorific-hanja.js'
+export * from './pyogi-more.js'
 export * from './doe.js'
 export * from './endings.js'
 export * from './lexicon.js'
@@ -96,5 +98,6 @@ export const allRules: Rule[] = [
   ...unitMoreRules,
   ...anMotRules,
   ...honorificHanjaRules,
+  ...pyogiMoreRules,
   ...endingRules,
 ]
