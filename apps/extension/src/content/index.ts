@@ -240,6 +240,9 @@ const popover = createPopover({
   async onIgnore(diagnostic) {
     await ignoreStore?.add(diagnostic)
     scheduleCheck(0)
+    // 되돌리려면 설정 화면까지 가야 하는 일이다. 무엇이 조용해졌고 어디서 되돌리는지
+    // 그 자리에서 말해 준다. 나중에 "왜 이건 안 잡히지"를 겪지 않게 하는 것이 요점이다.
+    toast(`'${diagnostic.text}'는 앞으로 지적하지 않습니다 · 설정 > 무시한 항목에서 되돌리기`)
   },
   onApplyAll() {
     const fixed = fixAll()

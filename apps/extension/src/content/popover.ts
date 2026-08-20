@@ -70,6 +70,11 @@ const STYLE = `
  */
 .btn--all { font-weight: 600; background: transparent; color: #16150f; border-color: rgba(0, 0, 0, 0.38); }
 /*
+ * 되돌리려면 설정 화면까지 가야 하는 단추다. 그 무게를 색으로 알린다 —
+ * 조용한 회색이 아니라 테두리가 있는 경고빛. 그렇다고 주 단추만큼 끌면 안 되므로 채우지는 않는다.
+ */
+.btn--ignore { background: transparent; color: #8a4a1f; border-color: rgba(138, 74, 31, 0.4); }
+/*
  * 어두운 테마는 **맨 마지막**에 둔다.
  * 앞에 두면 뒤따르는 밝은색 규칙이 같은 명시도로 덮어써서, 어두운 배경 위에
  * 어두운 글자가 얹힌다. 실제로 '모두 고치기'와 'Esc 닫기'가 그렇게 안 보였다.
@@ -82,6 +87,7 @@ const STYLE = `
   .btn--quiet { background: transparent; color: #f2efe6; }
   .btn--all { background: transparent; color: #f2efe6; border-color: rgba(255, 255, 255, 0.45); }
   .brand { color: #f2efe6; }
+  .btn--ignore { background: transparent; color: #e0a878; border-color: rgba(224, 168, 120, 0.42); }
 }
 
 `
@@ -233,9 +239,16 @@ export function createPopover(actions: PopoverActions): Popover {
       })
 
       const ignoreButton = document.createElement('button')
-      ignoreButton.className = 'btn btn--quiet'
       // '고치기(Tab)'과 같은 꼴로 맞춘다. 두 단추가 다른 문법으로 적히면 눈에 걸린다.
-      ignoreButton.textContent = options.compact ? '닫기(Esc)' : '무시'
+      //
+      // 닫기와 무시는 되돌리는 값이 다르다. 닫기는 카드만 치우지만 무시는 사전에 남아
+      // 앞으로 어느 사이트에서든 그 표기를 지나친다. '무시' 한 단어로는 '이번만 넘어가기'로
+      // 읽히기 쉬워서 **계속**을 붙이고, 무엇이 얼마나 조용해지는지 툴팁으로 밝힌다.
+      ignoreButton.className = options.compact ? 'btn btn--quiet' : 'btn btn--ignore'
+      ignoreButton.textContent = options.compact ? '닫기(Esc)' : '계속 무시'
+      if (!options.compact) {
+        ignoreButton.title = `'${diagnostic.text}'를 앞으로 지적하지 않습니다. 이 사이트뿐 아니라 모든 곳에서요. 설정 > 무시한 항목에서 되돌릴 수 있습니다.`
+      }
       ignoreButton.addEventListener('click', () => {
         if (options.compact) hide()
         else {

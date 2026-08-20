@@ -3,11 +3,13 @@ import { anAnh, anhAlone, bojoJiAnh, jiAnh } from './an.js'
 import { attachedRules } from './attached.js'
 import { bojoRules } from './bojo.js'
 import { busaRules } from './busa.js'
+import { busaSuRules } from './busa-su.js'
 import { bojoBodaRules } from './bojo-boda.js'
 import { nnbGeoRules } from './nnb-geo.js'
 import { seosulHadaRules } from './seosul-hada.js'
 import { principleRules } from './principle.js'
 import { pyogiRules } from './pyogi.js'
+import { jaripNounRules } from './jarip-noun.js'
 import { josaYongeonRules } from './josa-yongeon.js'
 import { nnbMoreRules } from './nnb-more.js'
 import { seosulExtRules } from './seosul-ext.js'
@@ -33,11 +35,13 @@ export * from './an.js'
 export * from './attached.js'
 export * from './bojo.js'
 export * from './busa.js'
+export * from './busa-su.js'
 export * from './bojo-boda.js'
 export * from './nnb-geo.js'
 export * from './seosul-hada.js'
 export * from './principle.js'
 export * from './pyogi.js'
+export * from './jarip-noun.js'
 export * from './josa-yongeon.js'
 export * from './nnb-more.js'
 export * from './seosul-ext.js'
@@ -89,11 +93,13 @@ export const allRules: Rule[] = [
   ...proseSpacingRules,
   ...bojoRules,
   ...busaRules,
+  ...busaSuRules,
   ...bojoBodaRules,
   ...nnbGeoRules,
   ...seosulHadaRules,
   ...principleRules,
   ...pyogiRules,
+  ...jaripNounRules,
   ...josaYongeonRules,
   ...nnbMoreRules,
   ...seosulExtRules,
