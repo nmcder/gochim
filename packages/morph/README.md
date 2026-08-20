@@ -13,8 +13,10 @@ import { createAnalyzer } from '@gochim/morph'
 
 const analyzer = await createAnalyzer()
 
-fix('반찬은 네가 먹을만큼만 덜어서 가져가.', { analyzer })
-// '반찬은 네가 먹을 만큼만 덜어서 가져가.'
+// '대로'가 조사냐 의존명사냐는 앞말의 품사가 정한다.
+// 체언 뒤면 붙이고, 관형사형 뒤면 띄운다. 문자열만으로는 갈리지 않는다.
+fix('결국 다 네 말 대로 되고 말았네.', { analyzer })
+// '결국 다 네 말대로 되고 말았네.'
 
 fix('나도 너 만큼 잘할 수 있어.', { analyzer })
 // '나도 너만큼 잘할 수 있어.'
