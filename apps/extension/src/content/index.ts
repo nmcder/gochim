@@ -336,7 +336,14 @@ document.addEventListener('focusin', (event) => {
 })
 
 document.addEventListener('input', (event) => {
-  if (session && event.target === session.target.element) scheduleCheck()
+  if (session && event.target === session.target.element) {
+    scheduleCheck()
+    return
+  }
+  // 우리보다 먼저 포커스가 간 입력칸. 아래 attachActive의 설명 참고.
+  // 붙는 순간을 놓쳐도 첫 글자를 치면 여기서 붙잡는다.
+  const target = toEditable(event.target)
+  if (target) attach(target)
 })
 
 document.addEventListener(
@@ -421,6 +428,21 @@ new MutationObserver(() => {
   if (session && !document.contains(session.target.element)) detach()
 }).observe(document.documentElement, { childList: true, subtree: true })
 
+/**
+ * 이미 포커스가 가 있는 입력칸을 붙잡는다.
+ *
+ * 콘텐츠 스크립트는 `document_idle`에 돈다. 그런데 구글 검색처럼 **페이지가 뜨자마자
+ * 입력칸에 자동으로 포커스를 주는 사이트**에서는 그 포커스가 우리보다 먼저 끝난다.
+ * 그러면 `focusin`이 영영 오지 않아서, 사용자가 다른 데를 클릭했다 돌아오기 전까지
+ * 아무 일도 일어나지 않는다. 검색창에 바로 타이핑하는 것이 가장 흔한 쓰임인데도 그렇다.
+ *
+ * 그래서 시작할 때 지금 포커스가 어디 있는지 직접 본다.
+ */
+function attachActive(): void {
+  const target = toEditable(document.activeElement)
+  if (target) attach(target)
+}
+
 async function boot(): Promise<void> {
   ;[settings, ignoreStore] = await Promise.all([loadSettings(), openIgnoreStore({ name: 'gochim-extension' })])
   onSettingsChanged((next) => {
@@ -433,6 +455,7 @@ async function boot(): Promise<void> {
     }
   })
   if (session) scheduleCheck(0)
+  else attachActive()
 }
 
 void boot()
