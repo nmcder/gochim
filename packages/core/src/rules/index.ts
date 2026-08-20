@@ -8,6 +8,7 @@ import { nnbGeoRules } from './nnb-geo.js'
 import { seosulHadaRules } from './seosul-hada.js'
 import { principleRules } from './principle.js'
 import { pyogiRules } from './pyogi.js'
+import { josaYongeonRules } from './josa-yongeon.js'
 import { nnbMoreRules } from './nnb-more.js'
 import { seosulExtRules } from './seosul-ext.js'
 import { eomiHwaryongRules } from './eomi-hwaryong.js'
@@ -37,6 +38,7 @@ export * from './nnb-geo.js'
 export * from './seosul-hada.js'
 export * from './principle.js'
 export * from './pyogi.js'
+export * from './josa-yongeon.js'
 export * from './nnb-more.js'
 export * from './seosul-ext.js'
 export * from './eomi-hwaryong.js'
@@ -92,6 +94,7 @@ export const allRules: Rule[] = [
   ...seosulHadaRules,
   ...principleRules,
   ...pyogiRules,
+  ...josaYongeonRules,
   ...nnbMoreRules,
   ...seosulExtRules,
   ...eomiHwaryongRules,

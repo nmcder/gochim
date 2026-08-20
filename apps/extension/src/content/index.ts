@@ -39,6 +39,14 @@ interface Session {
   /** 저절로 띄운 카드가 가리키는 진단. 커서가 벗어나면 닫는다. */
   suggested: Diagnostic | null
   /**
+   * Esc로 물린 진단의 자리(`시작:끝`).
+   *
+   * 숨기기만 해서는 부족하다. 다시 그릴 일이 생기면(형태소 결과가 늦게 도착하거나
+   * 재검사가 돌면) 커서가 그대로이므로 같은 카드가 그 자리에서 또 뜬다.
+   * 그래서 물렸다는 사실을 남겨 두고, 커서가 그 진단을 벗어날 때 푼다.
+   */
+  dismissed: string | null
+  /**
    * 글 전체를 훑은 결과. 창(4,000자) 밖까지 포함한다.
    *
    * 글이 바뀔 때마다 비우고, '모두 고치기'를 보여 주거나 누를 때만 채운다.
@@ -88,6 +96,11 @@ function paint(): void {
   suggestAtCaret()
 }
 
+/** 진단 한 건을 가리키는 자리 열쇠. 글이 바뀌면 오프셋이 달라져 저절로 무효가 된다. */
+function keyOf(d: Diagnostic): string {
+  return `${d.start}:${d.end}`
+}
+
 /** 커서가 걸쳐 있는 진단. 방금 친 낱말을 고르기 위해 끝점까지 포함해서 본다. */
 function diagnosticAtCaret(caret: number): Diagnostic | null {
   if (!session) return null
@@ -113,6 +126,8 @@ function suggestAtCaret(): void {
     }
     return
   }
+  // 사용자가 Esc로 물린 자리면 커서가 벗어나기 전까지 다시 띄우지 않는다.
+  if (session.dismissed === keyOf(hit)) return
   if (session.suggested && session.suggested.start === hit.start && session.suggested.end === hit.end) return
 
   const rect = session.layer.rectOf(hit)
@@ -325,6 +340,7 @@ function attach(target: EditableTarget): void {
     timer: 0,
     spellcheckWas,
     suggested: null,
+    dismissed: null,
     whole: null,
   }
   scheduleCheck(0)
@@ -383,7 +399,11 @@ document.addEventListener(
     if (!popover.isOpen) return
 
     if (event.key === 'Escape') {
-      if (session) session.suggested = null
+      if (session) {
+        const shown = popover.current
+        session.dismissed = shown ? keyOf(shown) : null
+        session.suggested = null
+      }
       popover.hide()
       return
     }
@@ -399,11 +419,15 @@ document.addEventListener(
   true,
 )
 
-// 커서가 오류 밖으로 나가면 저절로 띄운 카드는 닫는다.
+// 커서가 오류 밖으로 나가면 저절로 띄운 카드는 닫고, 물려 둔 것도 푼다.
 document.addEventListener('selectionchange', () => {
-  if (!session || !session.suggested) return
+  if (!session) return
   const hit = diagnosticAtCaret(caretOf(session.target))
-  if (!hit || hit.start !== session.suggested.start) {
+
+  // 커서가 물린 진단을 벗어났다. 이제 다시 띄워도 성가시지 않다.
+  if (session.dismissed && (!hit || session.dismissed !== keyOf(hit))) session.dismissed = null
+
+  if (session.suggested && (!hit || hit.start !== session.suggested.start)) {
     session.suggested = null
     popover.hide()
   }
