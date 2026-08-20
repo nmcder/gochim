@@ -3,6 +3,7 @@ import { anAnh, anhAlone, bojoJiAnh, jiAnh } from './an.js'
 import { attachedRules } from './attached.js'
 import { bojoRules } from './bojo.js'
 import { busaRules } from './busa.js'
+import { goNadaRules } from './go-nada.js'
 import { busaSuRules } from './busa-su.js'
 import { bojoBodaRules } from './bojo-boda.js'
 import { nnbGeoRules } from './nnb-geo.js'
@@ -35,6 +36,7 @@ export * from './an.js'
 export * from './attached.js'
 export * from './bojo.js'
 export * from './busa.js'
+export * from './go-nada.js'
 export * from './busa-su.js'
 export * from './bojo-boda.js'
 export * from './nnb-geo.js'
@@ -93,6 +95,7 @@ export const allRules: Rule[] = [
   ...proseSpacingRules,
   ...bojoRules,
   ...busaRules,
+  ...goNadaRules,
   ...busaSuRules,
   ...bojoBodaRules,
   ...nnbGeoRules,

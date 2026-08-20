@@ -22,6 +22,8 @@ const isNorL = (ch: string) => {
 const ALWAYS_JOSA = ['커녕', '처럼', '조차', '마저', '부터', '까지']
 /** 용언 뒤에서는 의존명사가 되는 것들. 앞 음절 종성이 ㄴ·ㄹ이면 건드리지 않는다. */
 const AMBIGUOUS_JOSA = ['뿐만', '뿐이', '만큼', '대로']
+/** 어절이 이 조사로 끝나면 그 위에 조사를 하나 더 붙일 수 없다. */
+const ENDS_WITH_JOSA = /(?:이나|나|이라도|라도|은|는|이|가|을|를|도|만|과|와|에서|에게|으로|로|의|에)$/
 
 export const josaSpaced = defineRule({
   id: 'josa-spaced',
@@ -32,6 +34,14 @@ export const josaSpaced = defineRule({
     const [, prev = '', josaText = ''] = ctx.match
     // ㄴ·ㄹ 종성이면 관형사형 어미일 수 있다 — 그 경우 띄어 쓰는 게 맞다.
     if (AMBIGUOUS_JOSA.includes(josaText) && isNorL(prev)) return null
+
+    // `마저`는 조사이기도 하고 부사이기도 하다 — `너마저`(조사) / `일이나 마저 하자`(부사).
+    // 체언에 조사가 이미 붙어 있으면 그 위에 조사를 하나 더 붙일 수 없으므로,
+    // 앞 어절이 조사로 끝나면 뒤의 `마저`는 부사다.
+    if (josaText === '마저') {
+      const word = /(?:^|[^가-힣])([가-힣]+)$/.exec(ctx.text.slice(0, ctx.index + 1))?.[1] ?? ''
+      if (ENDS_WITH_JOSA.test(word)) return null
+    }
     return {
       suggestions: [`${prev}${josaText}`],
       message: `조사 '${josaText}'는 앞말에 붙여 씁니다.`,

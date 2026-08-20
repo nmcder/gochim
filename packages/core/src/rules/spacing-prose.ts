@@ -199,6 +199,11 @@ export const busaJalmot = defineRule({
  * `-아/-어` 뒤의 보조용언은 붙여 쓰는 것도 허용되지만(제47항),
  * `-다(가) 보다`와 `-ㄹ까 보다`는 그 허용 범위 밖이라 반드시 띄어 쓴다.
  */
+/** `다보`가 든 합성동사. `-다 보니`의 `-다`와 문자열이 같지만 어미가 아니다. */
+const DABO_COMPOUND = [
+  '내다보', '들여다보', '넘겨다보', '넘어다보', '굽어다보', '건너다보', '바라다보', '쳐다보',
+]
+
 export const bojoBoda = defineRule({
   id: 'bojo-boda',
   category: 'spacing',
@@ -209,6 +214,13 @@ export const bojoBoda = defineRule({
     const middle = ctx.match[2] ?? '까봐'
     const head = middle.slice(0, 1)
     const boda = middle.slice(1)
+
+    // `-다 보니`의 `-다`는 어미지만, `내다보다·들여다보다`의 `-다`는 어미가 아니다.
+    // 사전에 한 낱말로 오른 합성동사라 가르면 없던 말이 생긴다.
+    // 앞 두 음절까지 되짚어 어절 시작을 확인한다 — `창밖을 내다보았다`가 여기서 걸러진다.
+    const back = ctx.text.slice(Math.max(0, ctx.index - 2), ctx.index + 3)
+    if (DABO_COMPOUND.some((word) => back.includes(word))) return null
+
     return {
       suggestions: [`${prev}${head} ${boda}`],
       message: "보조용언 '보다'는 앞말과 띄어 씁니다.",
