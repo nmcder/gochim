@@ -9,6 +9,8 @@ import { seosulHadaRules } from './seosul-hada.js'
 import { principleRules } from './principle.js'
 import { pyogiRules } from './pyogi.js'
 import { nnbMoreRules } from './nnb-more.js'
+import { seosulExtRules } from './seosul-ext.js'
+import { eomiHwaryongRules } from './eomi-hwaryong.js'
 import { doeDwae, doeSentenceFinal, dwaeJiAnh } from './doe.js'
 import { endingRules } from './endings.js'
 import { confusable, lexicon } from './lexicon.js'
@@ -32,6 +34,8 @@ export * from './seosul-hada.js'
 export * from './principle.js'
 export * from './pyogi.js'
 export * from './nnb-more.js'
+export * from './seosul-ext.js'
+export * from './eomi-hwaryong.js'
 export * from './doe.js'
 export * from './endings.js'
 export * from './lexicon.js'
@@ -81,5 +85,7 @@ export const allRules: Rule[] = [
   ...principleRules,
   ...pyogiRules,
   ...nnbMoreRules,
+  ...seosulExtRules,
+  ...eomiHwaryongRules,
   ...endingRules,
 ]
