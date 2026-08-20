@@ -360,7 +360,7 @@ document.addEventListener(
       return
     }
     const rect = session.layer.rectOf(hit)
-    if (rect) popover.show(hit, rect, { total: wholeDiagnostics().length })
+    if (rect) popover.show(hit, rect, { acceptKey: settings?.acceptKey, total: wholeDiagnostics().length })
   },
   true,
 )

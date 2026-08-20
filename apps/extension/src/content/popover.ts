@@ -224,9 +224,9 @@ export function createPopover(actions: PopoverActions): Popover {
 
       const applyButton = document.createElement('button')
       applyButton.className = 'btn btn--primary'
-      applyButton.textContent = options.compact
-        ? `${options.acceptKey ?? 'Tab'} 고치기`
-        : `'${diagnostic.suggestions[0] ?? ''}'로 고치기`
+      // 무엇으로 바뀌는지는 바로 위 교정 표시 줄이 이미 보여 준다.
+      // 단추에 그 말을 또 적으면 길기만 하고, 대신 단축키를 적으면 다음번엔 손이 먼저 간다.
+      applyButton.textContent = `고치기(${options.acceptKey ?? 'Tab'})`
       applyButton.addEventListener('click', () => {
         actions.onApply(diagnostic)
         hide()
@@ -234,7 +234,8 @@ export function createPopover(actions: PopoverActions): Popover {
 
       const ignoreButton = document.createElement('button')
       ignoreButton.className = 'btn btn--quiet'
-      ignoreButton.textContent = options.compact ? 'Esc 닫기' : '무시'
+      // '고치기(Tab)'과 같은 꼴로 맞춘다. 두 단추가 다른 문법으로 적히면 눈에 걸린다.
+      ignoreButton.textContent = options.compact ? '닫기(Esc)' : '무시'
       ignoreButton.addEventListener('click', () => {
         if (options.compact) hide()
         else {
