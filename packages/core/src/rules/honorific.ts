@@ -1,3 +1,4 @@
+import { insideQuotes } from '../protect.js'
 import { defineRule } from './define.js'
 import type { Rule } from '../types.js'
 
@@ -25,6 +26,10 @@ export const honorificObject = defineRule({
   confidence: 0.93,
   pattern: new RegExp(`(${INANIMATE})(?:이|가|은|는)?\\s*(?:다\\s+|오늘\\s+|방금\\s+)?(나오셨|출발하셨|도착하셨|준비되셨)`, 'g'),
   resolve(ctx) {
+    // 인용부호 안은 남이 실제로 한 말이다. 고치면 그 사람이 하지 않은 말이 된다.
+    // 사물 존대는 예절 문제라 더욱 그렇다 — '음료 나오셨습니다'를 옮긴 글에서
+    // 그걸 고쳐 버리면 왜 그 말을 옮겼는지가 사라진다.
+    if (insideQuotes(ctx.text, ctx.index)) return null
     const honored = ctx.match[2] ?? ''
     const plain: Record<string, string> = {
       나오셨: '나왔',
