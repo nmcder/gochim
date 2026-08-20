@@ -23,14 +23,6 @@ const STYLE = `
   font: 14px/1.55 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', system-ui, sans-serif;
   word-break: keep-all;
 }
-@media (prefers-color-scheme: dark) {
-  .card { background: #1c1c16; color: #f2efe6; border-color: rgba(255, 255, 255, 0.14); }
-  .why { background: rgba(255, 255, 255, 0.06) !important; }
-  .btn { background: #2a2a22; color: #f2efe6; border-color: rgba(255, 255, 255, 0.16); }
-  .btn--primary { background: #f2efe6; color: #16150f; }
-  .btn--quiet { background: transparent; color: #f2efe6; }
-  .btn--all { background: transparent; color: #f2efe6; border-color: rgba(255, 255, 255, 0.45); }
-}
 .swap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; font-size: 15px; }
 .from { color: #c2402d; text-decoration: line-through; }
 .to { font-weight: 700; }
@@ -55,6 +47,20 @@ const STYLE = `
  * 색은 물려받지 않고 못 박는다 — 물려받게 두면 호스트나 테마에 따라 흰 글자가 흰 바탕에 얹힌다.
  */
 .btn--all { font-weight: 600; background: transparent; color: #16150f; border-color: rgba(0, 0, 0, 0.38); }
+/*
+ * 어두운 테마는 **맨 마지막**에 둔다.
+ * 앞에 두면 뒤따르는 밝은색 규칙이 같은 명시도로 덮어써서, 어두운 배경 위에
+ * 어두운 글자가 얹힌다. 실제로 '모두 고치기'와 'Esc 닫기'가 그렇게 안 보였다.
+ */
+@media (prefers-color-scheme: dark) {
+  .card { background: #1c1c16; color: #f2efe6; border-color: rgba(255, 255, 255, 0.14); }
+  .why { background: rgba(255, 255, 255, 0.06) !important; }
+  .btn { background: #2a2a22; color: #f2efe6; border-color: rgba(255, 255, 255, 0.16); }
+  .btn--primary { background: #f2efe6; color: #16150f; }
+  .btn--quiet { background: transparent; color: #f2efe6; }
+  .btn--all { background: transparent; color: #f2efe6; border-color: rgba(255, 255, 255, 0.45); }
+}
+
 `
 
 export interface PopoverActions {
