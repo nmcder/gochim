@@ -111,8 +111,14 @@ const proseR = recall(prose.paragraphs, { source: 'source', errors: 'errors', wr
 const corpusR = recall(corpus.texts, { source: 'source', errors: 'errors', wrong: 'wrongText' })
 
 // 아래 두 값은 지금까지 도달한 최고치다. 규칙을 더하면서 이 밑으로 내려가면 무언가 망가진 것이다.
+//
+// 여러 갈래 하한선이 0.9에서 0.6으로 **내려간 적이 있다.** 규칙이 나빠져서가 아니라
+// 표본을 7편에서 13편으로 늘렸기 때문이다. 0.901은 그 7편에 맞춰 규칙을 다듬어 얻은
+// 값이었고, 처음 보는 6편에서는 0.14~0.29였다. 하한선은 지금 표본에 대한 값이므로
+// 표본이 바뀌면 다시 재야 한다. 낮은 값이 부끄러워서 표본을 되돌리면 그 순간
+// 성적표가 거짓말을 하기 시작한다.
 const FLOOR_PROSE = 0.98
-const FLOOR_CORPUS = 0.9
+const FLOOR_CORPUS = 0.6
 
 must(
   `일기 표본 재현율 ${proseR.ratio.toFixed(3)} ≥ ${FLOOR_PROSE}`,
