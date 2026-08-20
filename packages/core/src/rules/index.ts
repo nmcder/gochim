@@ -12,6 +12,8 @@ import { nnbMoreRules } from './nnb-more.js'
 import { seosulExtRules } from './seosul-ext.js'
 import { eomiHwaryongRules } from './eomi-hwaryong.js'
 import { unitMoreRules } from './unit-more.js'
+import { anMotRules } from './an-mot.js'
+import { honorificHanjaRules } from './honorific-hanja.js'
 import { doeDwae, doeSentenceFinal, dwaeJiAnh } from './doe.js'
 import { endingRules } from './endings.js'
 import { confusable, lexicon } from './lexicon.js'
@@ -38,6 +40,8 @@ export * from './nnb-more.js'
 export * from './seosul-ext.js'
 export * from './eomi-hwaryong.js'
 export * from './unit-more.js'
+export * from './an-mot.js'
+export * from './honorific-hanja.js'
 export * from './doe.js'
 export * from './endings.js'
 export * from './lexicon.js'
@@ -90,5 +94,7 @@ export const allRules: Rule[] = [
   ...seosulExtRules,
   ...eomiHwaryongRules,
   ...unitMoreRules,
+  ...anMotRules,
+  ...honorificHanjaRules,
   ...endingRules,
 ]

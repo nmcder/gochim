@@ -112,7 +112,7 @@ const corpusR = recall(corpus.texts, { source: 'source', errors: 'errors', wrong
 
 // 아래 두 값은 지금까지 도달한 최고치다. 규칙을 더하면서 이 밑으로 내려가면 무언가 망가진 것이다.
 const FLOOR_PROSE = 0.98
-const FLOOR_CORPUS = 0.43
+const FLOOR_CORPUS = 0.86
 
 must(
   `일기 표본 재현율 ${proseR.ratio.toFixed(3)} ≥ ${FLOOR_PROSE}`,
