@@ -17,8 +17,13 @@ export interface Settings {
   /**
    * 형태소 분석 층(3층)을 쓸지.
    *
-   * 기본값이 꺼짐인 이유는 크기다 — WASM 0.4MB + 모델 1.2MB를 내려받는다.
-   * 켜면 품사를 보고 판정해 `먹을만큼만` 같은 띄어쓰기를 더 잡는다.
+   * **기본값은 켜짐이다.** 처음에는 크기(WASM 0.4MB + 모델 1.2MB) 때문에 꺼 두었는데,
+   * 재 보니 골든·실문 표본 241편에서 이 층이 혼자 잡는 것이 44건 있었다.
+   * `말 대로`(조사, 붙임)와 `들은 대로`(의존명사, 띄움)처럼 앞말의 품사가 정하는 자리는
+   * 문자열만으로는 갈리지 않는다.
+   *
+   * 파일은 확장 안에 들어 있어 **네트워크는 쓰지 않는다.** 워커도 입력칸을 처음 만질 때
+   * 만들므로, 글을 쓰지 않는 탭은 이 무게를 지지 않는다.
    */
   morph: boolean
   /**
@@ -50,7 +55,7 @@ export const DEFAULT_SETTINGS: Settings = {
   enabled: true,
   minConfidence: 0,
   categories: [],
-  morph: false,
+  morph: true,
   inlineSuggest: true,
   acceptKey: 'Tab',
   autoFixAbove: 0,

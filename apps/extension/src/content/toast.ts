@@ -11,6 +11,9 @@
 const STYLE = `
 :host { all: initial; }
 .toast {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   position: fixed;
   left: 50%;
   bottom: 32px;
@@ -27,6 +30,8 @@ const STYLE = `
   transition: opacity 140ms ease;
 }
 .toast--on { opacity: 1; }
+/* 이 알림도 사이트가 아니라 고침이 띄운 것임을 밝힌다. */
+.toast svg { display: block; flex: none; opacity: 0.75; }
 @media (prefers-color-scheme: dark) {
   .toast { background: #f2efe6; color: #16150f; }
 }
@@ -57,9 +62,20 @@ function ensure(): HTMLDivElement {
   return bubble
 }
 
+/** 팝오버와 같은 표시. 두 UI가 한 식구임을 눈으로 잇는다. */
+const BRAND_MARK =
+  '<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">' +
+  '<path d="M3 4.2h10M3 7.2h6.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>' +
+  '<path d="M2.6 11.6q1.2-1.7 2.4 0t2.4 0 2.4 0 2.4 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+  '</svg>'
+
 export function toast(message: string): void {
   const element = ensure()
-  element.textContent = message
+  // SVG는 우리가 쓴 상수다. 메시지는 textContent로 따로 넣어 사용자 글이 마크업이 되지 않게 한다.
+  element.innerHTML = BRAND_MARK
+  const label = document.createElement('span')
+  label.textContent = message
+  element.append(label)
   // 이전 알림이 떠 있으면 시간을 다시 센다. 두 개가 겹쳐 뜨지 않는다.
   window.clearTimeout(timer)
   requestAnimationFrame(() => element.classList.add('toast--on'))
