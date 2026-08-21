@@ -105,18 +105,36 @@ for (const para of corpus.paragraphs) {
  * 구간 겹침으로만 세면 점수가 후하게 나온다. `몇분뒤에`를 `몇 분뒤에`까지만 고쳐도
  * 겹치기 때문에 잡은 것으로 세지만, 사용자 눈에는 여전히 틀린 글이 남는다.
  * 확장의 '모두 고치기'가 생긴 뒤로는 이쪽이 진짜 성적이다.
+ *
+ * 확장과 마찬가지로 **여러 번 훑는다.** 한 자리에 오류가 둘 겹치면 엔진이 하나만 남기므로
+ * (`약속시간 보다`는 붙이기와 가르기가 함께 걸린다) 한 번만 고치면 절반이 남는다.
  */
-function applyAll(source, diagnostics) {
+const MAX_PASSES = 3
+
+function applyOnce(source, diagnostics) {
   let out = source
   let earliest = Number.POSITIVE_INFINITY
+  let changed = 0
   // 경고는 빼고 잰다. 정답은 규정이 허용하는 표기를 그대로 두기로 한 판정이라
-  // ('좀더'·'약속시간'·'다음날') 경고까지 적용하면 정답과 어긋나는 게 당연하다.
+  // ('좀더'·'다음날') 경고까지 적용하면 정답과 어긋나는 게 당연하다.
   // 확장의 '모두 고치기'는 사용자가 직접 누르는 것이라 경고까지 고친다 — 여기와 다르다.
   for (const d of [...diagnostics].filter((x) => x.severity !== 'warning').sort((a, b) => b.start - a.start)) {
     if (d.suggestions[0] == null) continue
     if (d.end > earliest) continue // 겹치는 진단은 뒤엣것만 쓴다 — 확장과 같은 규칙
     out = out.slice(0, d.start) + d.suggestions[0] + out.slice(d.end)
     earliest = d.start
+    changed += 1
+  }
+  return { out, changed }
+}
+
+function applyAll(source, diagnostics) {
+  let { out, changed } = applyOnce(source, diagnostics)
+  for (let pass = 1; pass < MAX_PASSES && changed > 0; pass += 1) {
+    const again = applyOnce(out, run(out))
+    if (again.changed === 0) break
+    out = again.out
+    changed = again.changed
   }
   return out
 }
