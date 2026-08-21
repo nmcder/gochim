@@ -618,8 +618,98 @@ export const siganJisi = defineLexicon({
   ],
 })
 
+/**
+ * 기계를 세는 단위 `대`.
+ *
+ * [suryang-danwi](#suryangDanwi)의 단위 목록에서 `대`를 뺀 이유가 있다 —
+ * `한대(寒帶)·세대(世代)·열대(熱帶)·일대(一帶)`처럼 한 낱말이 되는 짝이 많다.
+ * 그 짝을 만들지 않는 수관형사에서만 발화한다.
+ */
+export const suryangDae = defineRule({
+  id: 'suryang-dae',
+  category: 'spacing',
+  confidence: 0.92,
+  pattern: /(?<![가-힣0-9])(두|서너|너덧|대여섯|다섯|여섯|일곱|여덟|아홉|열두|스무)대(?![가-힣])/g,
+  resolve(ctx) {
+    const numeral = ctx.match[1] ?? ''
+    return {
+      suggestions: [`${numeral} 대`],
+      message: "단위 명사 '대'는 수관형사와 띄어 씁니다.",
+      explain: '기계나 차를 세는 단위 명사 "대"는 앞말과 띄어 씁니다.',
+      refs: ['한글 맞춤법 제43항'],
+    }
+  },
+  examples: [
+    { wrong: '그날 오븐 두대 가운데 하나가 고장 났습니다.', right: '그날 오븐 두 대 가운데 하나가 고장 났습니다.' },
+    { wrong: '주차장에 차가 다섯대 있었다.', right: '주차장에 차가 다섯 대 있었다.' },
+  ],
+  counterExamples: ['열대 지방의 기후.', '세대 간 대화가 필요하다.', '한대성 기후를 다룬 단원이다.'],
+})
+
+/**
+ * `-여(餘)` 뒤의 단위 명사.
+ *
+ * `-여`는 '그 수를 넘음'을 뜻하는 접미사라 수에 붙여 쓰지만(`이백여`),
+ * 그 뒤의 단위 명사는 별개의 단어라 띄어 쓴다.
+ */
+export const yeoDanwi = defineRule({
+  id: 'yeo-danwi',
+  category: 'spacing',
+  confidence: 0.92,
+  pattern:
+    /(?<![가-힣])((?:[일이삼사오육칠팔구]?(?:십|백|천|만))+여|\d+여)(명|개|건|점|곳|가지|년|일|시간|분|권|장|대|채|통)(?=[을를이가은는에의도만과와로으씩쯤][가-힣]*|[\s.,!?…)"']|$)/g,
+  resolve(ctx) {
+    const numeral = ctx.match[1] ?? ''
+    const counter = ctx.match[2] ?? ''
+    return {
+      suggestions: [`${numeral} ${counter}`],
+      message: '단위 명사는 앞말과 띄어 씁니다.',
+      explain:
+        "'-여(餘)'는 '그 수를 넘음'을 뜻하는 접미사라 수에 붙여 쓰지만, 뒤따르는 단위 명사는 별개의 단어라 띄어 씁니다.",
+      refs: ['한글 맞춤법 제43항'],
+    }
+  },
+  examples: [
+    { wrong: '개관식에는 주민 이백여명이 모였다.', right: '개관식에는 주민 이백여 명이 모였다.' },
+    { wrong: '행사장에 삼십여개의 부스가 들어섰다.', right: '행사장에 삼십여 개의 부스가 들어섰다.' },
+  ],
+  counterExamples: ['이백여 명이 모였다.', '여명이 밝아 올 무렵 길을 나섰다.'],
+})
+
+/**
+ * 접미사 `-당(當)`은 앞말에 붙여 쓴다.
+ *
+ * 접사는 단어가 아니라 제2항의 띄어쓰기 대상이 아니다. 그런데 뒤에 수가 이어져
+ * (`한 가구 당 5천 원`) 단위 명사처럼 보이는 탓에 띄어 쓰는 일이 잦다.
+ * 정당(政黨)을 뜻하는 `당`과 갈리도록 **수를 세는 말 뒤에서만** 발화한다.
+ */
+export const dangSuffix = defineRule({
+  id: 'dang-suffix',
+  category: 'spacing',
+  confidence: 0.9,
+  pattern: /(?<![가-힣])(가구|세대|가정|사람|학생|인원|명|개|건|시간|한\s*시간|하루|일|주|달|월|년|회|팀|학급|평|킬로|리터)\s+당(?![가-힣])/g,
+  resolve(ctx) {
+    const head = ctx.match[1] ?? ''
+    return {
+      suggestions: [`${head}당`],
+      message: "접미사 '-당'은 앞말에 붙여 씁니다.",
+      explain:
+        "'-당(當)'은 '마다'의 뜻을 더하는 접미사입니다. 접사는 단어가 아니므로 각 단어를 띄어 쓴다는 제2항의 대상이 아닙니다.",
+      refs: ['한글 맞춤법 제2항'],
+    }
+  },
+  examples: [
+    { wrong: '회비는 한 가구 당 5천 원이다.', right: '회비는 한 가구당 5천 원이다.' },
+    { wrong: '학생 한 사람 당 두 권씩 나눠 준다.', right: '학생 한 사람당 두 권씩 나눠 준다.' },
+  ],
+  counterExamples: ['그 당 대표가 회견을 열었다.', '우리 당의 입장은 분명하다.'],
+})
+
 export const unitMoreRules: Rule[] = [
   suryangDanwi,
+  suryangDae,
+  yeoDanwi,
+  dangSuffix,
   hanjaSuDanwi,
   ibeonDaeumJu,
   jinanJuBuchim,

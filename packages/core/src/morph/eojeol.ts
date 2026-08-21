@@ -155,7 +155,7 @@ const SPLIT_ADVERBS = new Set([
   '한참', '다시', '함부로', '똑바로', '정확히', '분명히', '확실히', '충분히', '완전히',
   '특히', '무조건', '도저히', '반드시', '제발', '잔뜩', '마구', '곧바로', '잘못',
   '정말', '진짜', '너무', '매우', '아주', '조금', '먼저', '일찍', '괜히', '얼마나',
-  '제일', '제대로',
+  '제일', '제대로', '같이',
 ])
 
 /**
@@ -178,6 +178,15 @@ const ADVERB_HADA_OK = new Set([
   '얼른', '갑자기', '살짝', '슬쩍', '부지런히', '꾸준히', '아무리', '많이', '훨씬',
   '일찍', '먼저', '괜히', '제대로', '똑바로', '함부로', '확실히', '분명히', '정확히',
 ])
+
+/**
+ * 부사 **뒤에** 올 때만 받는 한 음절 부사.
+ *
+ * 앞자리에 두면 `안되다·못하다`를 가르게 되지만, 뒷자리는 사정이 다르다.
+ * `조금더·제일더`처럼 부사가 겹친 자리는 붙여 쓸 이유가 없다.
+ * (제46항은 단음절 **단어가 이어질 때**를 말하는데, `조금`이 두 음절이라 해당하지 않는다)
+ */
+const TAIL_ADVERBS = new Set(['더', '덜', '꼭', '늘', '참', '다', '곧', '막'])
 
 /** 부사와 어간이 붙어 한 낱말이 되는 짝. `오래가다`가 그렇다. */
 const KEEP_JOINED_PAIR = new Set(['오래+가'])
@@ -296,14 +305,19 @@ function cutKind(word: Word, i: number): Kind | null {
       return 'adverb'
     }
     // 부사 뒤의 부사·명사도 별개의 단어다 — `제일먼저`, `다시한번`, `일찍예매했는데`.
-    if (cur.pos === 'MAG' && SPLIT_ADVERBS.has(cur.text)) return 'adverb'
+    if (cur.pos === 'MAG' && (SPLIT_ADVERBS.has(cur.text) || TAIL_ADVERBS.has(cur.text))) return 'adverb'
     if (cur.pos === 'NNG') return 'adverb'
   }
 
-  if (prev.pos === 'EC' && SPACED_EC.has(prev.text)) {
+  // 종결어미(EF)로 읽히는 자리도 있다 — `아프신가봐`의 `ㄴ가`가 그렇다.
+  if ((prev.pos === 'EC' || prev.pos === 'EF') && SPACED_EC.has(prev.text)) {
     if (cur.pos === 'VX') return 'bojo'
     if (cur.pos === 'VV' && AUX_STEM.has(cur.text)) return 'bojo'
   }
+
+  // 접미사 뒤에 명사가 바로 붙은 자리 — `선생님덕분에`, `학생들대표`.
+  // 접미사는 앞말에 붙지만 그다음 명사는 별개의 단어다.
+  if (prev.pos === 'XSN' && cur.pos === 'NNG') return 'noun'
 
   return null
 }
@@ -316,7 +330,9 @@ function cutKind(word: Word, i: number): Kind | null {
  * 한 글자로도 선다** — `할 수`, `들릴까 봐`. 그래서 갈래마다 기준이 다르다.
  */
 function minTail(kind: Kind): number {
-  return kind === 'nnb' || kind === 'bojo' ? 1 : 2
+  // 의존명사·보조용언은 한 글자로도 선다(`할 수`, `들릴까 봐`).
+  // 관형사형 뒤의 명사도 마찬가지다 — `확인한 뒤`, `지나온 길`.
+  return kind === 'josa' || kind === 'adverb' || kind === 'noun' ? 2 : 1
 }
 
 export const morphEojeolSplit: MorphRule = {
@@ -345,7 +361,9 @@ export const morphEojeolSplit: MorphRule = {
 
         const at = splitPoint(word, i, trimmed)
         if (at == null || at <= 0 || at >= trimmed.length) continue
-        if (trimmed.length - at < minTail(kind)) continue
+        // 부사가 겹친 자리는 뒤가 한 글자여도 좋다 — `조금 더`. 목록으로 받은 말이라 안전하다.
+        const need = word.morphemes[i]!.pos === 'MAG' ? 1 : minTail(kind)
+        if (trimmed.length - at < need) continue
         if (kind === 'noun' && NOUN_KEEP_TAIL.has(trimmed[at]!)) continue
         if (KEEP_JOINED_TAIL.has(trimmed.slice(at))) continue
         // 같은 자리를 두 번 자르지 않는다.

@@ -364,6 +364,21 @@ export const lexicon = defineLexicon({
     },
     { wrong: '조취가', right: '조치가', display: { wrong: '조취', right: '조치' }, explain: "대책을 세워 행하는 것은 '조치(措置)'입니다." },
     { wrong: '조취는', right: '조치는', display: { wrong: '조취', right: '조치' }, explain: "대책을 세워 행하는 것은 '조치(措置)'입니다." },
+    {
+      wrong: '첨부파일',
+      right: '첨부 파일',
+      explain: "'첨부 파일'은 표준국어대사전에 한 낱말로 오르지 않은 구입니다. 명사와 명사는 각각의 단어이므로 띄어 씁니다.",
+      refs: ['한글 맞춤법 제2항'],
+      examples: [{ wrong: '자세한 내용은 첨부파일에 정리했습니다.', right: '자세한 내용은 첨부 파일에 정리했습니다.' }],
+    },
+    {
+      wrong: '파고 들',
+      right: '파고들',
+      display: { wrong: '파고 들다', right: '파고들다' },
+      explain: "'파고들다'는 '깊숙이 안으로 들어가다'라는 뜻으로 사전에 한 낱말로 올라 있습니다. 한 단어는 붙여 씁니다.",
+      refs: ['한글 맞춤법 제2항'],
+      examples: [{ wrong: '어젯밤엔 이불로 파고 들어서 결국 같이 잤다.', right: '어젯밤엔 이불로 파고들어서 결국 같이 잤다.' }],
+    },
   ],
 })
 
@@ -416,6 +431,8 @@ export const confusable = defineLexicon({
     {
       wrong: '바램',
       right: '바람',
+      // 가드가 두 겹이라(조사 + 색 어휘 배제) 이 사전의 기본값인 경고보다 한 단계 위로 올린다.
+      severity: 'error',
       when: (ctx) =>
         '은는이가을입였'.includes(ctx.after) && !near(/색|햇빛|볕|원단|천|염색|잉크/)(ctx),
       explain: "'바라다'의 명사형은 '바람'입니다. '바래다'는 빛깔이 옅어진다는 뜻입니다.",
@@ -425,6 +442,9 @@ export const confusable = defineLexicon({
     {
       wrong: '결재',
       right: '결제',
+      // 여기는 경고로 남긴다. 창(window)이 열 글자라 `대금 지급 결재를 요청했습니다`처럼
+      // 사이에 말이 낀 자리까지 닿는데, 그건 결재(승인)가 맞는 문장이다.
+      // 바로 옆에 붙은 자리는 [hanja-gyeolje](./honorific-hanja.ts)가 오류로 잡는다.
       when: near(/카드|현금|신용|체크|자동|간편|온라인|모바일|대금|요금|할부|계좌/, 10),
       explain: "돈을 주고받는 것은 '결제(決濟)'입니다. '결재(決裁)'는 상급자가 안건을 승인하는 것입니다.",
       examples: [{ wrong: '카드 결재가 안 돼서 현금으로 냈다.', right: '카드 결제가 안 돼서 현금으로 냈다.' }],

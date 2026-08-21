@@ -162,13 +162,24 @@ export const morphJiElapsed: MorphRule = {
   run(ctx: MorphRuleContext): MorphFinding[] {
     const found: MorphFinding[] = []
 
-    for (const word of ctx.words) {
-      if (!isPlainHangulWord(word.text)) continue
-      const trimmed = trimTail(word.text)
+    for (const raw of ctx.words) {
+      if (!isPlainHangulWord(raw.text)) continue
+      const trimmed = trimTail(raw.text)
       if (!trimmed.endsWith('지') || trimmed.length < 3) continue
 
-      const at = word.morphemes.findIndex((m) => (m.pos === 'EC' || m.pos === 'EF') && NJI.has(m.text))
+      // 문장 안에서는 `시행한지`를 `시행/NNG + 한지/NNG`로 읽어 놓고,
+      // 떼어 놓고 물으면 `시행/NNG + 하/XSA + ㄴ지/EF`로 제대로 가른다.
+      // 그래서 어미가 안 보이면 한 번 더 물어본다.
+      let morphemes = raw.morphemes
+      let at = morphemes.findIndex((m) => (m.pos === 'EC' || m.pos === 'EF') && NJI.has(m.text))
+      if (at < 1) {
+        const solo = groupWords(trimmed, ctx.analyze(trimmed))
+        if (solo.length !== 1) continue
+        morphemes = solo[0]!.morphemes
+        at = morphemes.findIndex((m) => (m.pos === 'EC' || m.pos === 'EF') && NJI.has(m.text))
+      }
       if (at < 1) continue
+      const word = { ...raw, morphemes: [...morphemes] }
       // 높임 선어말어미는 건너뛴다 — `오신지`는 `오/VV + 시/EP + ㄴ지/EF`다.
       let stem = at - 1
       while (stem > 0 && word.morphemes[stem]!.pos === 'EP') stem -= 1

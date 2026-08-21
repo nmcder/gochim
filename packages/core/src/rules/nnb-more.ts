@@ -698,7 +698,102 @@ export const nnbDeDareun = defineRule({
   ],
 })
 
+/**
+ * `우리집` → `우리 집`.
+ *
+ * 표준국어대사전에 한 낱말로 오른 것은 `우리나라·우리말·우리글` 셋뿐이다.
+ * 나머지는 대명사 `우리`와 명사가 이어진 구라 띄어 쓴다.
+ *
+ * 뒤에 올 수 있는 명사를 목록으로 잡는다. 반대로 하면(`우리` 뒤는 다 띄운다)
+ * 위 셋과 사전에 오른 다른 말들을 가르게 된다.
+ */
+const OUR_NOUN =
+  '집|가게|반|팀|학교|회사|동네|가족|아빠|엄마|형|누나|언니|오빠|동생|아들|딸|부모님|선생님|고양이|강아지|사무실|교실|방|차|아이들|식구'
+
+export const daemyeongsaNoun = defineRule({
+  id: 'daemyeongsa-noun',
+  category: 'spacing',
+  confidence: 0.92,
+  // 뒤에 조사가 붙어도 잡아야 한다 — `저희가게를`. 다만 한글이 더 이어지면
+  // 다른 낱말일 수 있으므로(`우리집단`) 조사로 시작하는 자리만 받는다.
+  pattern: new RegExp(`(?<![가-힣])(우리|저희)(${OUR_NOUN})(?=[을를이가은는에의도만과와로으부까처][가-힣]*|[\\s.,!?…)"']|$)`, 'g'),
+  resolve(ctx) {
+    const [, head = '', noun = ''] = ctx.match
+    return {
+      suggestions: [`${head} ${noun}`],
+      message: '대명사와 명사는 띄어 씁니다.',
+      explain:
+        "표준국어대사전에 한 낱말로 오른 것은 '우리나라·우리말·우리글'뿐입니다. 그 밖에는 대명사 '우리·저희'와 명사가 이어진 구라 띄어 씁니다.",
+      refs: ['한글 맞춤법 제2항'],
+    }
+  },
+  examples: [
+    { wrong: '우리집 강아지는 새벽마다 현관문을 긁는다.', right: '우리 집 강아지는 새벽마다 현관문을 긁는다.' },
+    { wrong: '저희가게를 찾아 주신 손님들께 사과드립니다.', right: '저희 가게를 찾아 주신 손님들께 사과드립니다.' },
+  ],
+  counterExamples: ['우리나라 사람은 정이 많다.', '우리말을 아끼자.', '우리글로 적는다.', '우리 집 앞에서 만나자.'],
+})
+
+/**
+ * `사과 드립니다` → `사과드립니다`.
+ *
+ * `-드리다`는 공손의 뜻을 더하는 **접미사**라 앞말에 붙는다.
+ * 사전에 한 낱말로 오른 것만 목록에 둔다 — `사과드리다·감사드리다·말씀드리다`.
+ * 본용언 `드리다`(선물을 드리다)와는 다르다.
+ *
+ * `인사`는 뺐다. `문안 인사 드리고 왔어`의 `인사`는 드리는 **대상**이라
+ * 그 자리에서는 띄어 쓰는 것이 맞다. 목적어로 읽힐 수 있는 말은 넣지 않는다.
+ */
+export const deuridaSuffix = defineRule({
+  id: 'deurida-suffix',
+  category: 'spacing',
+  confidence: 0.92,
+  pattern: /(?<![가-힣])(사과|감사|말씀|연락|부탁|축하)\s+(드리|드립|드릴|드렸|드림|드려)/g,
+  resolve(ctx) {
+    const [, head = '', tail = ''] = ctx.match
+    return {
+      suggestions: [`${head}${tail}`],
+      message: "접미사 '-드리다'는 앞말에 붙여 씁니다.",
+      explain:
+        "'사과드리다·감사드리다'는 공손의 뜻을 더하는 접미사 '-드리다'가 붙은 파생어로 사전에 한 낱말로 올라 있습니다. 물건을 건네는 본용언 '드리다'(선물을 드리다)와는 다릅니다.",
+      refs: ['한글 맞춤법 제2항'],
+    }
+  },
+  examples: [
+    { wrong: '손님들께 머리 숙여 사과 드립니다.', right: '손님들께 머리 숙여 사과드립니다.' },
+    { wrong: '도와주셔서 감사 드립니다.', right: '도와주셔서 감사드립니다.' },
+  ],
+  counterExamples: ['어르신께 선물을 드렸다.', '이 책을 부모님께 드리려고 샀다.'],
+})
+
+/**
+ * 화제를 돌리는 `한편`은 한 낱말이다.
+ *
+ * `영화 한 편·글 한 편`의 `편`은 단위 명사라 띄어 쓴다. 둘은 글자가 같아 갈리지 않는데,
+ * 담화 표지로 쓰인 `한편`은 **쉼표가 바로 따라온다**는 성질이 있다.
+ */
+export const hanpyeonDiscourse = defineRule({
+  id: 'hanpyeon-discourse',
+  category: 'spacing',
+  confidence: 0.9,
+  pattern: /(?<![가-힣])한 편(?=,)/g,
+  resolve() {
+    return {
+      suggestions: ['한편'],
+      message: "화제를 돌릴 때 쓰는 '한편'은 한 낱말입니다.",
+      explain:
+        "'한편'은 '다른 한 방면으로는'을 뜻하는 부사로 사전에 한 낱말로 올라 있습니다. 단위 명사로 쓰인 '영화 한 편'과는 다릅니다.",
+      refs: ['한글 맞춤법 제2항'],
+    }
+  },
+  examples: [{ wrong: '한 편, 회원증은 해마다 갱신해야 한다.', right: '한편, 회원증은 해마다 갱신해야 한다.' }],
+  counterExamples: ['어젯밤에 영화 한 편을 봤다.', '수필 한 편을 써서 냈다.'],
+})
+
 export const nnbMoreRules: Rule[] = [
+  daemyeongsaNoun,
+  deuridaSuffix,
+  hanpyeonDiscourse,
   nnbDeut,
   nnbDeJosa,
   nnbDePredicate,

@@ -88,6 +88,8 @@ const WORDS: Loanword[] = [
   { wrong: '후라이', right: '프라이', note: '[f]는 ㅍ으로 적습니다. 일본식 フライ의 영향입니다.' },
   { wrong: '화이팅', right: '파이팅', note: '[f]는 ㅍ으로 적습니다. 표준국어대사전 표제어도 파이팅입니다.' },
   { wrong: '카스테라', right: '카스텔라', note: '포르투갈어 castella의 [l]은 ㄹㄹ로 적습니다.' },
+  { wrong: '바게뜨', right: '바게트', note: '파열음 표기에는 된소리를 쓰지 않습니다(제1장 제4항). 프랑스어 baguette입니다.' },
+  { wrong: '크로와상', right: '크루아상', note: '프랑스어 croissant의 표준 표기는 크루아상입니다.' },
   { wrong: '뱃지', right: '배지', note: 'badge에는 받침으로 적을 자음이 없습니다.' },
   { wrong: '셋트', right: '세트', note: 'set의 짧은 모음 뒤 어말 [t]는 받침 ㅅ으로 적어 세트가 됩니다.' },
   { wrong: '런닝', right: '러닝', note: '같은 자음을 겹쳐 적지 않습니다(제1장 제2항). running은 러닝입니다.' },
