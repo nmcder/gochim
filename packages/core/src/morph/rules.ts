@@ -2,6 +2,7 @@ import { josa } from '../hangul.js'
 import type { MorphFinding, MorphRule, MorphRuleContext } from '../types.js'
 import { morphEojeolSplit } from './eojeol.js'
 import { morphIyeot, morphJiElapsed, morphLyeogo } from './eomi.js'
+import { morphKkeseoAgreement } from './nopim.js'
 
 /**
  * 품사 기반 띄어쓰기 규칙 (3층).
@@ -86,4 +87,5 @@ export const allMorphRules: MorphRule[] = [
   morphLyeogo,
   morphIyeot,
   morphJiElapsed,
+  morphKkeseoAgreement,
 ]

@@ -27,6 +27,7 @@ export { allRules } from './rules/index.js'
 export { allMorphRules, morphJosaAttach } from './morph/rules.js'
 export { morphEojeolSplit } from './morph/eojeol.js'
 export { morphIyeot, morphJiElapsed, morphLyeogo } from './morph/eomi.js'
+export { morphKkeseoAgreement } from './morph/nopim.js'
 export { groupWords, morphemeOffset } from './morph/words.js'
 export { defineLexicon, defineRule } from './rules/define.js'
 export type {

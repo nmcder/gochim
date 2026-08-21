@@ -140,9 +140,9 @@ const KEY = { source: 'source', errors: 'errors', wrong: 'wrongText' }
 // 표본이 바뀌면 다시 재야 한다. 낮은 값이 부끄러워서 표본을 되돌리면 그 순간
 // 성적표가 거짓말을 하기 시작한다.
 const FLOOR_PROSE = 0.98
-const FLOOR_CORPUS = 0.72
+const FLOOR_CORPUS = 0.74
 /** 형태소 층까지 켠 값. 확장의 기본값이라 이쪽이 사용자가 실제로 보는 성적이다. */
-const FLOOR_CORPUS_MORPH = 0.87
+const FLOOR_CORPUS_MORPH = 0.90
 
 const proseR = recall(prose.paragraphs, KEY, false)
 const corpusR = recall(corpus.texts, KEY, false)
