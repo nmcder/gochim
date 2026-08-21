@@ -23,7 +23,7 @@
     "bench": "npm run build -w @gochim/core && npm run build -w @gochim/morph && node scripts/bench.mjs",
     "prose:report": "npm run build -w @gochim/core && node scripts/prose-report.mjs",
     "corpus:report": "npm run build -w @gochim/core && node scripts/corpus-report.mjs",
-    "guard": "npm run build -w @gochim/core && node scripts/guard.mjs"
+    "guard": "npm run build -w @gochim/core && npm run build -w @gochim/morph && node scripts/guard.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

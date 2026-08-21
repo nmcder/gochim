@@ -1,7 +1,7 @@
 import { josa } from '../hangul.js'
-import type { MorphFinding, MorphRule, MorphRuleContext, Word } from '../types.js'
+import type { MorphFinding, MorphRule, MorphRuleContext } from '../types.js'
 import { morphEojeolSplit } from './eojeol.js'
-import { morphemeOffset } from './words.js'
+import { morphIyeot, morphJiElapsed, morphLyeogo } from './eomi.js'
 
 /**
  * 품사 기반 띄어쓰기 규칙 (3층).
@@ -14,30 +14,15 @@ import { morphemeOffset } from './words.js'
  *   그 밖에    → 밖/NNG + 에/JKB                             → 건드리지 않는다
  *   나 밖에    → 밖에/JX                                     → 붙여야 한다
  *
- * 1층에서 예외 목록으로 막아야 했던 `실수·별것·부재중·일리`가 여기서는 저절로 걸러진다.
+ * 어절 **안쪽**을 가르는 일은 [eojeol.ts](./eojeol.ts)가 통째로 맡는다.
+ * 여기 남은 것은 어절 **사이**를 붙이는 규칙이다.
  */
 
 /** 조사 계열 태그. J로 시작하면 전부 조사다. */
 const isJosa = (pos: string) => pos.startsWith('J')
 
-/**
- * 수를 세는 단위명사. 앞에 수가 없으면 단위로 쓰인 것이 아니다.
- *
- * 분석기가 `여명(黎明)`을 `여/XSN + 명/NNB`로 잘못 쪼개는 일이 있다.
- * 이 목록에 든 말은 바로 앞 형태소가 수(SN·NR·MM)일 때만 띄어쓰기를 제안한다.
- */
-const UNIT_NNB = new Set(['명', '개', '권', '장', '시', '분', '원', '번', '살', '마리', '그루', '채', '켤레', '벌', '통', '병'])
-
 /** 동사·부사로도 쓰여 분석기가 자주 헷갈리는 말. 붙이면 뜻이 바뀌므로 손대지 않는다. */
 const RISKY_JOSA = new Set(['같이', '만치'])
-
-/**
- * 분석기가 의존명사로 잘못 읽는 표면형.
- *
- * `어젯밤엔`을 `어젯밤/NNG + 엔/NNB`으로, `한내마을`을 `한/MM + 내/NNB + 마을/NNG`으로
- * 읽는다. 둘 다 의존명사가 아니다. 사전에 없는 말을 만나면 분석기가 짐작하는 자리다.
- */
-const NOT_REALLY_NNB = new Set(['엔', '내', '건', '란'])
 
 /**
  * `보다`는 셋으로 갈린다 — 조사(생각보다), 부사(보다 나은), 동사(영화 보다 잠들었다).
@@ -45,76 +30,6 @@ const NOT_REALLY_NNB = new Set(['엔', '내', '건', '란'])
  */
 const DEGREE_ADVERBS = ['훨씬', '더', '덜', '조금', '한참', '많이', '적게', '빨리', '늦게', '일찍', '크게', '작게']
 const BODA_OK = new RegExp(`^\\s*(?:${DEGREE_ADVERBS.join('|')})[\\s가-힣]`)
-
-/** 어절 안에서 형태소가 실제로 몇 글자를 차지하는지 모르므로, 붙은 의존명사는 뒤까지 통째로 옮긴다. */
-function splitFinding(word: Word, at: number, nnb: string): MorphFinding | null {
-  // 어절 범위에는 뒤따르는 문장부호가 딸려 온다. 밑줄은 글자에만 긋는다.
-  const trimmed = word.text.replace(/[\s.,!?…"')\]}]+$/, '')
-  if (at <= 0 || at >= trimmed.length) return null
-  const head = trimmed.slice(0, at)
-  const tail = trimmed.slice(at)
-  return {
-    start: word.start,
-    end: word.start + trimmed.length,
-    suggestions: [`${head} ${tail}`],
-    message: `의존명사 '${nnb}'${josa(nnb, '은/는')} 앞말과 띄어 씁니다.`,
-    explain:
-      '형태소 분석 결과 이 자리의 말이 의존명사로 쓰였습니다. 의존명사는 앞말과 띄어 씁니다. (같은 글자라도 조사로 쓰이면 붙여 씁니다)',
-    refs: ['한글 맞춤법 제42항'],
-  }
-}
-
-export const morphNnbSpacing: MorphRule = {
-  id: 'morph-nnb-spacing',
-  category: 'spacing',
-  severity: 'error',
-  confidence: 0.93,
-  run(ctx: MorphRuleContext): MorphFinding[] {
-    const found: MorphFinding[] = []
-    for (const word of ctx.words) {
-      if (word.morphemes.length < 2) continue
-      // 어절의 첫 형태소가 의존명사면 이미 띄어 쓴 것이다.
-      const index = word.morphemes.findIndex((m, i) => i > 0 && m.pos === 'NNB')
-      if (index === -1) continue
-
-      // 수 + 단위명사는 붙여 쓸 수 있다 — `10년`, `90점`, `3개`. (제43항 다만)
-      if (word.morphemes[index - 1]?.pos === 'SN' || /^\d/.test(word.text)) continue
-
-      // 단위명사인데 앞에 수가 없으면 단위로 쓰인 것이 아니다. ('여명'을 '여 명'으로 쪼개는 오분석 방지)
-      const nnb = word.morphemes[index]!.text
-      const previousPos = word.morphemes[index - 1]?.pos ?? ''
-      if (UNIT_NNB.has(nnb) && !['SN', 'NR', 'MM'].includes(previousPos)) continue
-
-      if (NOT_REALLY_NNB.has(nnb)) continue
-      // `그분·이분·저분·윗분·여러분`은 관형사와 붙어 한 낱말이 된 말이다.
-      if (nnb === '분' && previousPos === 'MM') continue
-
-      const at = morphemeOffset(word, index)
-      if (at == null) continue
-
-      const finding = splitFinding(word, at, word.morphemes[index]!.text)
-      if (finding) found.push(finding)
-    }
-    return found
-  },
-  examples: [
-    { wrong: '누구나 할수있는 일이야.', right: '누구나 할 수 있는 일이야.' },
-    { wrong: '동아리에서 배운것이 도움이 되었다.', right: '동아리에서 배운 것이 도움이 되었다.' },
-    { wrong: '지금 회의중이라 못 받아.', right: '지금 회의 중이라 못 받아.' },
-    { wrong: '우리 내일 만날거야?', right: '우리 내일 만날 거야?' },
-  ],
-  counterExamples: [
-    '이른 새벽 여명 속에서 등교하며 하루를 시작했다.',
-    '10년 만에 만난 친구가 하나도 안 변했더라.',
-    '장학금을 받으려면 평균이 90점은 돼야 한다.',
-    '이번에는 큰 실수 없이 발표를 마쳤다.',
-    '이것보다 저것이 훨씬 마음에 든다.',
-    '이 생선은 날것으로 먹어도 신선하다.',
-    '올해는 실적이 없다.',
-    '네 말도 일리가 있다.',
-    '휴대폰에 부재중 전화가 세 통 찍혔다.',
-  ],
-}
 
 export const morphJosaAttach: MorphRule = {
   id: 'morph-josa-attach',
@@ -165,4 +80,10 @@ export const morphJosaAttach: MorphRule = {
   ],
 }
 
-export const allMorphRules: MorphRule[] = [morphNnbSpacing, morphJosaAttach, morphEojeolSplit]
+export const allMorphRules: MorphRule[] = [
+  morphEojeolSplit,
+  morphJosaAttach,
+  morphLyeogo,
+  morphIyeot,
+  morphJiElapsed,
+]

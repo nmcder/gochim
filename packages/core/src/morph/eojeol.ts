@@ -1,14 +1,18 @@
-import type { Morpheme, MorphFinding, MorphRule, MorphRuleContext, Word } from '../types.js'
-import { groupWords, morphemeOffset } from './words.js'
+import { josa } from '../hangul.js'
+import type { MorphFinding, MorphRule, MorphRuleContext, Word } from '../types.js'
+import { isPlainHangulWord, reanalyze, splitPoint, trimTail } from './split.js'
 
 /**
  * 어절 안쪽 띄어쓰기 (3층).
  *
- * 표본을 13편으로 늘리자 못 잡는 오류 107건이 거의 한 갈래로 몰렸다.
+ * 표본을 늘릴 때마다 못 잡는 오류가 한 갈래로 몰렸다 — **여러 단어가 한 어절에 붙은 것**이다.
  *
- *   물이끓으면 · 기름을두르고 · 눈물이났습니다 · 가게에오시면   조사 + 용언
- *   남은재료는 · 힘든날에는 · 지참하신분은 · 오시는길에         관형사형 어미 + 자립명사
- *   볶고나서 · 먹고나니 · 쓰고나니                              보조용언 `-고 나다`
+ *   물이끓으면 · 기름을두르고 · 눈물이났습니다     조사 + 용언
+ *   남은재료는 · 힘든날에는 · 오시는길에           관형사형 어미 + 자립명사
+ *   할수있다 · 배운것이 · 만날거야                 의존명사
+ *   많이내리기 · 아무리봐도 · 이제와서             부사 + 용언
+ *   학교끝나고 · 고장나면 · 물기빼고               명사 + 용언 (조사가 빠진 자리)
+ *   늦지않고 · 하고있다 · 볶고나서 · 앉게됐다      어미 + 보조용언
  *
  * 1층에서는 짝 목록으로밖에 못 잡았다 — `화가나-`, `집에가-`를 하나하나 적는 식이다.
  * 그런 조합은 사실상 무한하다. `물이끓으면`을 잡으려면 `물이`가 명사+조사이고
@@ -21,17 +25,30 @@ import { groupWords, morphemeOffset } from './words.js'
  *   맛있다 → 맛있/VA        (맛/NNG + 있/VA 가 아니다)
  *   화나다 → 화나/VV        (화/NNG + 나/VV 가 아니다)
  *   큰일   → 큰일/NNG       (크/VA + ㄴ/ETM + 일/NNG 이 아니다)
- *   어린이 → 어린이/NNG
+ *   알아보다 → 알아보/VV     (알/VV + 아/EC + 보/VX 가 아니다)
  *
  * 그래서 "조사 태그 뒤에 용언 태그가 온다"는 조건 자체가 이미 강한 가드다.
  * 1층에서 블록리스트로 막아야 했던 것들이 여기서는 저절로 걸러진다.
  *
- * ## 부사는 뺐다
+ * ## 한 어절은 한 진단으로
  *
- * `살짝볶아·오래끓이면`도 같은 갈래지만 부사만은 사정이 다르다.
- * 분석기가 한 낱말인 `안되다·잘하다·더하다`를 `안/MAG + 되/VV`처럼 쪼갠다.
- * 이쪽은 [busa.ts](../rules/busa.ts)처럼 낱개로 잡는 편이 안전하다.
+ * `잘못나온거`에는 가를 자리가 둘이다(`잘못|나온|거`). 규칙을 갈래마다 따로 두었더니
+ * 두 진단의 구간이 같은 어절에서 겹쳐 엔진이 하나만 남겼고, 사용자는 `잘못 나온거`처럼
+ * **반만 고쳐진 결과**를 받았다. 그래서 갈래를 나누지 않고 **어절을 한 번만 훑어
+ * 자를 자리를 모은 뒤 한 진단으로** 낸다. 의존명사 규칙도 여기 합쳐진 이유다.
+ *
+ * ## 넣지 않은 것
+ *
+ * **`-아/-어` + 보조용언**(`도착해버렸다`, `쌓여있었던`). 제47항이 붙여쓰기를 **허용**하는
+ * 자리라 애초에 오류가 아니고, 분석기도 `해가`를 `하/VV + 아/EC + 가/VX`로 읽어
+ * `해 가`로 가르려 든다. 얻을 것이 없고 잃을 것만 있다.
+ *
+ * **한 음절 부사**(`안·못·잘`)와 **`-하다·-되다`가 뒤따르는 자리**. 붙어 굳은 짝이 너무 많다.
+ * 분석 비용(`score`)으로 한 낱말인지 걸러 보려 했으나 붙여 쓰나 띄어 쓰나 값이 같아
+ * 신호가 되지 못했다. 결국 어간 쪽에서 목록으로 막는다 — 그 대가로 `열심히하겠습니다`를 놓친다.
  */
+
+/* ─────────────────────────── 조사 + 용언 ─────────────────────────── */
 
 /** 조사. J로 시작하면 전부 조사다. */
 const isJosa = (pos: string) => pos.startsWith('J')
@@ -45,7 +62,7 @@ const isJosa = (pos: string) => pos.startsWith('J')
 const VERBAL = new Set(['VV', 'VA', 'VX'])
 
 /**
- * 자립명사. 의존명사(NNB)는 [morph-nnb-spacing](./rules.ts)이 따로 맡는다.
+ * 자립명사.
  *
  * 고유명사(NNP)는 뺐다. 사전에 없는 이름은 분석기가 짐작으로 쪼개는데,
  * 그 짐작을 믿고 어절을 가르면 없던 오류가 생긴다.
@@ -56,7 +73,8 @@ const FREE_NOUN = new Set(['NNG'])
 /**
  * 이 어절은 건드리지 않는다.
  *
- * 분석기가 한 낱말을 조사 + 용언으로 쪼개는 자리. 실측으로 찾은 것만 적는다.
+ * 앞의 둘은 분석기가 한 낱말을 조사 + 용언으로 쪼개는 자리, 뒤의 둘은 한 낱말로 굳은
+ * 이름씨다. 전부 실측으로 찾은 것만 적는다.
  */
 const KEEP_JOINED = new Set([
   '이라도', '이라서', '이라며', '이라는', '이란', '이나마', '이야말로',
@@ -64,130 +82,260 @@ const KEEP_JOINED = new Set([
 ])
 
 /**
- * `-고 나다`의 `나`인가.
+ * 한 낱말로 굳은 이름씨. 뒤에 조사가 붙어도 그대로 둔다.
  *
- * 보조용언 `나다`는 앞 동작이 끝났음을 나타낸다. 제47항이 붙여쓰기를 허용하는
- * `-아/-어` 뒤가 아니라 `-고` 뒤라서 반드시 띄어 쓴다.
- * `일어나다·태어나다·자라나다`는 한 낱말이라 분석기가 쪼개지 않으므로 여기 오지 않는다.
+ * `다시 보기`가 원칙이지만 화면에 붙은 이름으로 굳었다. 방송 다시보기 화면에서
+ * 밑줄이 그어지면 고침이 틀린 쪽으로 보인다.
  */
-function isGoNada(word: Word, i: number): boolean {
-  const prev = word.morphemes[i - 1]
-  const cur = word.morphemes[i]
-  return prev?.pos === 'EC' && prev.text === '고' && cur?.pos === 'VX' && cur.text.startsWith('나')
-}
+const KEEP_JOINED_NOUN = ['다시보기', '다시듣기', '미리보기', '미리듣기']
 
 /**
- * 어절을 다시 분석해 본다.
+ * 명사 뒤에서는 손대지 않는 어간.
  *
- * 분석기는 **문장 안에서** 모르는 어절을 만나면 통째로 미등록 명사 하나로 처리한다.
- *
- *   문장 안: `물이끓으면` → 물이끓으면/NNG            (안이 안 보인다)
- *   따로:    `물이끓으면` → 물/NNG + 이/JKS + 끓/VV + 으면/EC
- *
- * 붙여 쓴 어절이 바로 그 "모르는 말"이라, 문장 분석만 믿으면 정작 고쳐야 할 자리를
- * 통째로 놓친다. 그래서 한 덩어리로 나온 긴 어절은 떼어 내 한 번 더 물어본다.
+ * `-하다·-되다·-드리다·-시키다·-받다·-당하다`는 명사에 붙어 한 낱말을 만드는 파생 접미사다.
+ * `말씀드리다·연락드리다·감사드리다`가 그렇고, 분석기는 이들을 `말씀/NNG + 드리/VV`로 갈라 놓는다.
+ * `해-`는 `하다`의 활용형이라 함께 막는다 — `확인해보니까`를 `확인 해보니까`로 가르던 자리다.
  */
-function reanalyze(ctx: MorphRuleContext, word: Word): readonly Morpheme[] {
-  // 이미 여러 형태소로 갈렸으면 그 결과를 믿는다.
-  if (word.morphemes.length > 1) return word.morphemes
-  const trimmed = word.text.replace(/[\s.,!?…"')\]}]+$/, '')
-  // 짧은 말은 미등록이어도 가를 것이 없다.
-  if (trimmed.length < 4) return word.morphemes
-  const solo = groupWords(trimmed, ctx.analyze(trimmed))
-  // 떼어 놓고도 한 덩어리면 진짜 한 낱말이다.
-  if (solo.length !== 1) return word.morphemes
-  return solo[0]!.morphemes
-}
+const NOUN_KEEP_STEM = new Set(['하', '해', '되', '돼', '드리', '시키', '당하', '받', '화하', '짓'])
+
+/* ─────────────────────────── 의존명사 ─────────────────────────── */
 
 /**
- * 가를 자리를 찾는다.
+ * 수를 세는 단위명사. 앞에 수가 없으면 단위로 쓰인 것이 아니다.
  *
- * [morphemeOffset](./words.ts)은 앞에서부터 자모를 맞춰 나가다가 불규칙 활용을 만나면
- * 포기한다. `힘들 + ㄴ = 힘든`처럼 어간의 받침이 바뀌면 정렬이 어긋나기 때문이다.
- *
- * 그럴 때는 **뒤에서부터** 센다. 가를 자리 뒤의 형태소를 이어 붙인 것이 어절의 꼬리와
- * 정확히 같으면 그 길이만큼 물러난 자리가 답이다. 정확히 같을 때만 쓰므로
- * 앞쪽이 어떻게 바뀌었든 상관이 없다.
+ * 분석기가 `여명(黎明)`을 `여/XSN + 명/NNB`로 잘못 쪼개는 일이 있다.
+ * 이 목록에 든 말은 바로 앞 형태소가 수(SN·NR·MM)일 때만 띄어쓰기를 제안한다.
  */
-function splitPoint(word: Word, i: number, trimmed: string): number | null {
-  const byJamo = morphemeOffset(word, i)
-  if (byJamo != null) return byJamo
-  const tail = word.morphemes.slice(i).map((m) => m.text).join('')
-  if (tail.length === 0 || !trimmed.endsWith(tail)) return null
-  return trimmed.length - tail.length
-}
+const UNIT_NNB = new Set(['명', '개', '권', '장', '시', '분', '원', '번', '살', '마리', '그루', '채', '켤레', '벌', '통', '병'])
 
-/** 어절을 두 조각으로 가르는 진단. 뒤따르는 문장부호는 밑줄에서 뺀다. */
-function splitAt(word: Word, at: number, message: string, explain: string): MorphFinding | null {
-  const trimmed = word.text.replace(/[\s.,!?…"')\]}]+$/, '')
-  if (at <= 0 || at >= trimmed.length) return null
-  return {
-    start: word.start,
-    end: word.start + trimmed.length,
-    suggestions: [`${trimmed.slice(0, at)} ${trimmed.slice(at)}`],
-    message,
-    explain,
+/**
+ * 분석기가 의존명사로 잘못 읽는 표면형.
+ *
+ * `어젯밤엔`을 `어젯밤/NNG + 엔/NNB`으로, `한내마을`을 `한/MM + 내/NNB + 마을/NNG`으로
+ * 읽는다. 둘 다 의존명사가 아니다. 사전에 없는 말을 만나면 분석기가 짐작하는 자리다.
+ */
+const NOT_REALLY_NNB = new Set(['엔', '내', '건', '란'])
+
+/* ─────────────────────────── 부사 + 용언 ─────────────────────────── */
+
+/**
+ * 뒷말과 붙어 한 낱말이 되는 일이 없는 부사.
+ *
+ * 부사는 품사 태그만으로는 가를 수 없다. 분석기가 한 낱말인 `안되다·못하다·함께하다`를
+ * `안/MAG + 되/VV`처럼 쪼개기 때문이다. 그래서 **목록으로 좁힌다.**
+ * 여기 든 말은 어떤 용언과도 한 낱말을 이루지 않는 것으로 확인한 것들이고,
+ * 한 음절 부사(`안·못·잘·더·덜`)는 붙어 굳은 짝이 많아 아예 넣지 않았다.
+ * (`안 하다`·`못 하다`는 [an-mot.ts](../rules/an-mot.ts)가 문맥까지 보고 따로 맡는다)
+ */
+const SPLIT_ADVERBS = new Set([
+  '많이', '아무리', '살짝', '오래', '훨씬', '갑자기', '천천히', '조용히', '골고루',
+  '몰래', '억지로', '저절로', '우연히', '실컷', '대충', '얼른', '이제', '아까', '방금',
+  '자주', '가끔', '계속', '열심히', '겨우', '꾸준히', '슬쩍', '부지런히', '잠깐', '잠시',
+  '한참', '다시', '함부로', '똑바로', '정확히', '분명히', '확실히', '충분히', '완전히',
+  '특히', '무조건', '도저히', '반드시', '제발', '잔뜩', '마구', '곧바로', '잘못',
+  '정말', '진짜', '너무', '매우', '아주', '조금', '먼저', '일찍', '괜히', '얼마나',
+])
+
+/**
+ * 부사 뒤에서는 손대지 않는 어간.
+ *
+ * `-하다·-되다`는 부사에 붙어 한 낱말이 되는 일이 흔하다 —
+ * `잘못하다·계속하다·오래되다·잘못되다`. 분석기가 이들을 갈라 놓는 일이 있어
+ * 어간 쪽에서 막는다. 그 대가로 `열심히하겠습니다`는 놓친다.
+ */
+const ADVERB_KEEP_STEM = new Set(['하', '되'])
+
+/** 부사와 어간이 붙어 한 낱말이 되는 짝. `오래가다`가 그렇다. */
+const KEEP_JOINED_PAIR = new Set(['오래+가'])
+
+/* ─────────────────────────── 어미 + 보조용언 ─────────────────────────── */
+
+/**
+ * 뒤의 보조용언을 **반드시 띄어 써야 하는** 어미.
+ *
+ * 제47항이 붙여쓰기를 허용하는 자리는 `-아/-어` 뒤와 관형사형 뒤뿐이다.
+ * 여기 모은 어미는 그 목록에 없으므로 붙여 쓰면 허용이 아니라 오류다.
+ *
+ *   늦지않고 → 늦지 않고      보고싶다 → 보고 싶다      하다보니 → 하다 보니
+ *   앉게됐다 → 앉게 됐다      볶고나서 → 볶고 나서      들릴까봐 → 들릴까 봐
+ *
+ * 열린 집합으로 두지 않고 **적어 둔 것만** 받는다. 분석기가 `자버리는`의 `자`를
+ * 어미로 읽는 것처럼 엉뚱한 태그가 섞이는 자리가 있어서다.
+ */
+const SPACED_EC = new Set([
+  '고', '지', '다', '다가', '게', '어야', '아야', '여야',
+  'ㄹ까', '을까', 'ㄴ가', '은가', '는가', '나', 'ㄴ지', '은지', '는지',
+  // 인용의 `-다고 하다·-라고 하다`. 줄면 `-대·-래`가 되지만 펴 쓸 때는 띄어 쓴다.
+  '다고', '라고', '자고', '냐고', 'ㄴ다고', '는다고',
+])
+
+/**
+ * 어미 뒤에 와서 띄어 써야 하는 본용언 어간.
+ *
+ * 보조용언 태그(VX)가 아니라 본용언 태그(VV)로 나오는 자리가 있다 —
+ * `앉게됐다`의 `되`, `주겠다고해서`의 `하`, `아닌가보다`의 `보`.
+ * 어느 쪽 태그로 읽히든 띄어 써야 하는 것은 같으므로 이 셋만 따로 받는다.
+ */
+const AUX_STEM = new Set(['되', '하', '보'])
+
+/* ─────────────────────────── 갈래 ─────────────────────────── */
+
+type Kind = 'josa' | 'etm' | 'nnb' | 'adverb' | 'bojo' | 'noun'
+
+const REASON: Record<Kind, { message: string; explain: string; refs: string[] }> = {
+  josa: {
+    message: '조사 뒤의 용언은 띄어 씁니다.',
+    explain:
+      "형태소 분석 결과 앞말이 '체언 + 조사'이고 뒤가 용언입니다. 조사는 앞말에 붙지만 뒤따르는 용언은 별개의 단어라 띄어 씁니다. ('맛있다·화나다'처럼 한 낱말로 굳은 말은 조사가 없어 여기 걸리지 않습니다)",
+    refs: ['한글 맞춤법 제2항', '한글 맞춤법 제41항'],
+  },
+  etm: {
+    message: '관형사형 뒤의 명사는 띄어 씁니다.',
+    explain:
+      "형태소 분석 결과 앞말이 관형사형 어미(-는/-ㄴ/-ㄹ/-던)로 끝나고 뒤가 자립명사입니다. 둘은 별개의 단어라 띄어 씁니다. ('큰일·어린이'처럼 한 낱말로 굳은 말은 통째로 하나의 명사라 여기 걸리지 않습니다)",
     refs: ['한글 맞춤법 제2항'],
+  },
+  nnb: {
+    message: '의존명사는 앞말과 띄어 씁니다.',
+    explain:
+      '형태소 분석 결과 이 자리의 말이 의존명사로 쓰였습니다. 의존명사는 앞말과 띄어 씁니다. (같은 글자라도 조사로 쓰이면 붙여 씁니다)',
+    refs: ['한글 맞춤법 제42항'],
+  },
+  adverb: {
+    message: '부사와 용언은 띄어 씁니다.',
+    explain:
+      '형태소 분석 결과 앞말이 부사이고 뒤가 용언입니다. 둘은 별개의 단어라 띄어 씁니다.',
+    refs: ['한글 맞춤법 제2항'],
+  },
+  noun: {
+    message: '명사와 용언은 띄어 씁니다.',
+    explain:
+      "형태소 분석 결과 앞말이 명사이고 뒤가 용언입니다. 조사가 생략됐을 뿐 둘은 별개의 단어라 띄어 씁니다. ('힘들다·화나다·잠자다'처럼 한 낱말로 굳은 말은 통째로 하나의 용언이라 여기 걸리지 않습니다)",
+    refs: ['한글 맞춤법 제2항'],
+  },
+  bojo: {
+    message: '보조용언은 앞말과 띄어 씁니다.',
+    explain:
+      "제47항이 보조용언 붙여쓰기를 허용하는 자리는 '-아/-어' 뒤와 관형사형 뒤뿐입니다. '-지 않다·-고 있다·-고 싶다·-게 되다'처럼 다른 어미 뒤에서는 띄어 써야 합니다.",
+    refs: ['한글 맞춤법 제47항'],
+  },
+}
+
+interface Cut {
+  at: number
+  kind: Kind
+  /** 갈라 낸 말. 메시지에 그대로 쓴다. */
+  word: string
+}
+
+/** 이 자리에서 어절을 갈라야 하는가. 갈래를 돌려주고, 아니면 null. */
+function cutKind(word: Word, i: number): Kind | null {
+  const prev = word.morphemes[i - 1]!
+  const cur = word.morphemes[i]!
+
+  if (cur.pos === 'NNB') {
+    // 수 + 단위명사는 붙여 쓸 수 있다 — `10년`, `90점`, `3개`. (제43항 다만)
+    if (prev.pos === 'SN' || /^\d/.test(word.text)) return null
+    // 단위명사인데 앞에 수가 없으면 단위로 쓰인 것이 아니다. ('여명'을 '여 명'으로 쪼개는 오분석 방지)
+    if (UNIT_NNB.has(cur.text) && !['SN', 'NR', 'MM'].includes(prev.pos)) return null
+    if (NOT_REALLY_NNB.has(cur.text)) return null
+    // `그분·이분·저분·윗분·여러분`은 관형사와 붙어 한 낱말이 된 말이다.
+    if (cur.text === '분' && prev.pos === 'MM') return null
+    return 'nnb'
   }
+
+  if (isJosa(prev.pos) && VERBAL.has(cur.pos)) return 'josa'
+  if (prev.pos === 'ETM' && FREE_NOUN.has(cur.pos)) return 'etm'
+
+  if (FREE_NOUN.has(prev.pos) && VERBAL.has(cur.pos)) {
+    // 한 음절 명사는 분석기가 짐작으로 만들어 낸 것일 때가 많다 — `누우세요`를 `누/NNG + 울/VV`로 읽었다.
+    if (prev.text.length < 2) return null
+    if (NOUN_KEEP_STEM.has(cur.text)) return null
+    return 'noun'
+  }
+
+  if (prev.pos === 'MAG' && SPLIT_ADVERBS.has(prev.text) && VERBAL.has(cur.pos)) {
+    if (ADVERB_KEEP_STEM.has(cur.text)) return null
+    if (KEEP_JOINED_PAIR.has(`${prev.text}+${cur.text}`)) return null
+    return 'adverb'
+  }
+
+  if (prev.pos === 'EC' && SPACED_EC.has(prev.text)) {
+    if (cur.pos === 'VX') return 'bojo'
+    if (cur.pos === 'VV' && AUX_STEM.has(cur.text)) return 'bojo'
+  }
+
+  return null
+}
+
+/**
+ * 잘라 낸 뒤 조각이 너무 짧으면 오분석을 의심한다.
+ *
+ * `앞에서`를 `앞/NNG + 에/JKB + 서/VV`로 읽어 `앞에 서`로 가른 자리가 있었다.
+ * 홀로 선 용언은 어미가 붙어 두 글자를 넘는다. 다만 **의존명사와 보조용언은
+ * 한 글자로도 선다** — `할 수`, `들릴까 봐`. 그래서 갈래마다 기준이 다르다.
+ */
+function minTail(kind: Kind): number {
+  return kind === 'nnb' || kind === 'bojo' ? 1 : 2
 }
 
 export const morphEojeolSplit: MorphRule = {
   id: 'morph-eojeol-split',
   category: 'spacing',
   severity: 'error',
-  confidence: 0.9,
+  confidence: 0.93,
   run(ctx: MorphRuleContext): MorphFinding[] {
     const found: MorphFinding[] = []
 
     for (const raw of ctx.words) {
-      if (KEEP_JOINED.has(raw.text)) continue
-      // 숫자·영문이 섞인 어절은 분석기가 자주 흔들린다.
-      if (!/^[가-힣]+[\s.,!?…"')\]}]*$/.test(raw.text)) continue
+      if (KEEP_JOINED.has(trimTail(raw.text))) continue
+      if (KEEP_JOINED_NOUN.some((noun) => raw.text.startsWith(noun))) continue
+      if (!isPlainHangulWord(raw.text)) continue
 
       const morphemes = reanalyze(ctx, raw)
-      if (morphemes.length < 3) continue
+      if (morphemes.length < 2) continue
       // 다시 분석한 결과를 쓰려면 위치 계산도 그 결과로 해야 한다.
       const word: Word = { ...raw, morphemes: [...morphemes] }
+      const trimmed = trimTail(word.text)
 
+      const cuts: Cut[] = []
       for (let i = 1; i < word.morphemes.length; i += 1) {
-        const prev = word.morphemes[i - 1]!
-        const cur = word.morphemes[i]!
+        const kind = cutKind(word, i)
+        if (kind == null) continue
 
-        let message = ''
-        let explain = ''
-
-        if (isJosa(prev.pos) && VERBAL.has(cur.pos)) {
-          message = '조사 뒤의 용언은 띄어 씁니다.'
-          explain =
-            "형태소 분석 결과 앞말이 '체언 + 조사'이고 뒤가 용언입니다. 조사는 앞말에 붙지만 뒤따르는 용언은 별개의 단어라 띄어 씁니다. ('맛있다·화나다'처럼 한 낱말로 굳은 말은 조사가 없어 여기 걸리지 않습니다)"
-        } else if (prev.pos === 'ETM' && FREE_NOUN.has(cur.pos)) {
-          message = '관형사형 뒤의 명사는 띄어 씁니다.'
-          explain =
-            "형태소 분석 결과 앞말이 관형사형 어미(-는/-ㄴ/-ㄹ/-던)로 끝나고 뒤가 자립명사입니다. 둘은 별개의 단어라 띄어 씁니다. ('큰일·어린이'처럼 한 낱말로 굳은 말은 통째로 하나의 명사라 여기 걸리지 않습니다)"
-        } else if (isGoNada(word, i)) {
-          message = "보조용언 '나다'는 앞말과 띄어 씁니다."
-          explain =
-            "'-고 나다'는 앞 동작이 끝났음을 나타내는 보조용언 구성입니다. 제47항이 붙여쓰기를 허용하는 것은 '-아/-어' 뒤뿐이라 '-고' 뒤에서는 띄어 씁니다."
-        } else {
-          continue
-        }
-
-        const trimmed = word.text.replace(/[\s.,!?…"')\]}]+$/, '')
         const at = splitPoint(word, i, trimmed)
-        if (at == null) continue
+        if (at == null || at <= 0 || at >= trimmed.length) continue
+        if (trimmed.length - at < minTail(kind)) continue
+        // 같은 자리를 두 번 자르지 않는다.
+        if (cuts.some((c) => c.at === at)) continue
 
-        // 뒤 조각이 한 글자면 분석기의 오분석일 공산이 크다.
-        // `앞에서`를 `앞/NNG + 에/JKB + 서/VV`로 읽어 `앞에 서`로 가른 자리다.
-        // 진짜 용언은 어미가 붙어 두 글자를 넘는다.
-        if (trimmed.length - at < 2) continue
-
-        const finding = splitAt(word, at, message, explain)
-        if (finding) {
-          found.push(finding)
-          // 한 어절에서 한 곳만 고친다. 다시 검사하면 남은 자리가 잡힌다.
-          break
-        }
+        cuts.push({ at, kind, word: word.morphemes[i]!.text })
       }
+
+      if (cuts.length === 0) continue
+
+      // 뒤에서부터 넣어야 앞쪽 위치가 밀리지 않는다.
+      let suggestion = trimmed
+      for (const cut of [...cuts].sort((a, b) => b.at - a.at)) {
+        suggestion = `${suggestion.slice(0, cut.at)} ${suggestion.slice(cut.at)}`
+      }
+
+      const first = cuts[0]!
+      const reason = REASON[first.kind]
+      const kinds = [...new Set(cuts.map((c) => c.kind))]
+      found.push({
+        start: word.start,
+        end: word.start + trimmed.length,
+        suggestions: [suggestion],
+        message:
+          cuts.length === 1
+            ? first.kind === 'nnb'
+              ? `의존명사 '${first.word}'${josa(first.word, '은/는')} 앞말과 띄어 씁니다.`
+              : reason.message
+            : `여러 단어가 한 어절에 붙어 있습니다. ${cuts.length}군데를 띄어 씁니다.`,
+        explain: kinds.map((k) => REASON[k].explain).join(' '),
+        refs: [...new Set(kinds.flatMap((k) => REASON[k].refs))],
+      })
     }
 
     return found
@@ -200,6 +348,22 @@ export const morphEojeolSplit: MorphRule = {
     { wrong: '남은재료는 냉동실에 넣었다.', right: '남은 재료는 냉동실에 넣었다.' },
     { wrong: '힘든날에는 음악을 듣는다.', right: '힘든 날에는 음악을 듣는다.' },
     { wrong: '재료를 볶고나서 물을 붓는다.', right: '재료를 볶고 나서 물을 붓는다.' },
+    { wrong: '누구나 할수있는 일이야.', right: '누구나 할 수 있는 일이야.' },
+    { wrong: '동아리에서 배운것이 도움이 되었다.', right: '동아리에서 배운 것이 도움이 되었다.' },
+    { wrong: '지금 회의중이라 못 받아.', right: '지금 회의 중이라 못 받아.' },
+    { wrong: '우리 내일 만날거야?', right: '우리 내일 만날 거야?' },
+    { wrong: '비가 많이내리기 시작했다.', right: '비가 많이 내리기 시작했다.' },
+    { wrong: '이건 아무리봐도 이상하다.', right: '이건 아무리 봐도 이상하다.' },
+    { wrong: '이제와서 그런 말을 하면 어쩌자는 거야.', right: '이제 와서 그런 말을 하면 어쩌자는 거야.' },
+    { wrong: '약속을 늦지않고 지켰다.', right: '약속을 늦지 않고 지켰다.' },
+    { wrong: '친구를 계속 보고싶다는 생각이 들었다.', right: '친구를 계속 보고 싶다는 생각이 들었다.' },
+    { wrong: '그러다보니 시간이 다 갔다.', right: '그러다 보니 시간이 다 갔다.' },
+    { wrong: '결국 같이 가게됐다.', right: '결국 같이 가게 됐다.' },
+    { wrong: '새로 만들어 주겠다고해서 기다렸다.', right: '새로 만들어 주겠다고 해서 기다렸다.' },
+    { wrong: '음식이 잘못나온거 같았다.', right: '음식이 잘못 나온 거 같았다.' },
+    { wrong: '어제 학교끝나고 바로 왔다.', right: '어제 학교 끝나고 바로 왔다.' },
+    { wrong: '냄비 뚜껑덮고 약불로 줄인다.', right: '냄비 뚜껑 덮고 약불로 줄인다.' },
+    { wrong: '기계가 고장나면 연락 주세요.', right: '기계가 고장 나면 연락 주세요.' },
   ],
   counterExamples: [
     '이번 국이 참 맛있다.',
@@ -219,5 +383,33 @@ export const morphEojeolSplit: MorphRule = {
     '사랑스러운 아이였다.',
     '생각하기에 따라 다르다.',
     '오래 기다린 보람이 있다.',
+    '이른 새벽 여명 속에서 등교하며 하루를 시작했다.',
+    '10년 만에 만난 친구가 하나도 안 변했더라.',
+    '장학금을 받으려면 평균이 90점은 돼야 한다.',
+    '이번에는 큰 실수 없이 발표를 마쳤다.',
+    '이것보다 저것이 훨씬 마음에 든다.',
+    '이 생선은 날것으로 먹어도 신선하다.',
+    '올해는 실적이 없다.',
+    '네 말도 일리가 있다.',
+    '휴대폰에 부재중 전화가 세 통 찍혔다.',
+    '그 집은 오래가는 물건만 판다.',
+    '이 일은 잘못하면 크게 다친다.',
+    '공부를 계속하기로 했다.',
+    '이 옷은 산 지 오래됐다.',
+    '주말에는 다시보기로 밀린 방송을 챙겨 본다.',
+    '동생이 잘못했다고 사과했다.',
+    '친구들은 벌써 도착했다.',
+    '이쪽으로 누우세요.',
+    '자세한 내용은 메일로 말씀드리겠습니다.',
+    '결과는 따로 연락드리겠습니다.',
+    '떡국을 끓여 먹었다.',
+    '그릇을 깨뜨려 버렸다.',
+    '창밖에는 눈이 쌓여있었다.',
+    '김치찌개는 겨울에 더 맛있다.',
+    '위험을 무릅쓰고 나섰다.',
+    '사과가 두 개나 남았다.',
+    '그는 밤새 눈물바람이었다.',
+    '이 문제는 결국 시간문제였다.',
+    '오늘따라 길이 유난히 막힌다.',
   ],
 }

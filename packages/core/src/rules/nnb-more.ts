@@ -654,10 +654,55 @@ export const nnbDeterminer = defineLexicon({
   ],
 })
 
+/**
+ * `다른데 가자 → 다른 데 가자`.
+ *
+ * `다른데`도 둘로 갈린다 — 관형사 `다른` + 의존명사 `데`(곳)와, 형용사 `다르다`의
+ * 연결어미 `-ㄴ데`다.
+ *
+ *   다른데 가는 게 어때?   ← 곳. 띄어 쓴다
+ *   성격은 다른데 잘 맞아   ← 어미. 붙여 쓴다
+ *
+ * [nnb-de-josa](#nnbDeJosa)는 뒤에 조사가 붙은 자리만(`다른데로·다른데를`) 잡고,
+ * [nnb-de-predicate](#nnbDePredicate)는 관형사형 `-는/-ㄹ` 뒤만 본다. 조사 없이 선
+ * `다른데`는 둘 다 놓친다. 그래서 **뒤따르는 용언**으로 가른다 — 장소를 요구하는
+ * `가다·오다·들르다·찾다`가 이어지면 그 `데`는 곳이다.
+ * 어미로 읽으면 `성격은 다른데 가는 게 어때?`가 되어 말이 이어지지 않는다.
+ */
+const DE_PLACE_VERB = /^\s+(?:가는|가자|가서|가고|가면|가려|갈|갔|가 |오는|오면|올|와서|왔|들르|둘러|찾아|찾을|알아보)/
+
+export const nnbDeDareun = defineRule({
+  id: 'nnb-de-dareun',
+  category: 'spacing',
+  confidence: 0.9,
+  pattern: /(?<![가-힣])다른데(?=\s)/g,
+  resolve(ctx) {
+    if (!DE_PLACE_VERB.test(ctx.text.slice(ctx.index + 3))) return null
+    return {
+      suggestions: ['다른 데'],
+      message: "'곳'을 뜻하는 의존명사 '데'는 앞말과 띄어 씁니다.",
+      explain:
+        "여기서 '데'는 '곳·장소'를 뜻하는 의존명사입니다. 형용사 '다르다'의 연결어미 '-ㄴ데'(성격은 다른데 잘 맞아)와 달리 앞말과 띄어 씁니다.",
+      refs: ['한글 맞춤법 제42항'],
+    }
+  },
+  examples: [
+    { wrong: '여기 말고 다른데 가는 게 어때?', right: '여기 말고 다른 데 가는 게 어때?' },
+    { wrong: '오늘은 다른데 들르지 말고 바로 오자.', right: '오늘은 다른 데 들르지 말고 바로 오자.' },
+  ],
+  counterExamples: [
+    '성격은 다른데 이상하게 잘 맞는다.',
+    '값은 다른데 품질은 비슷하다.',
+    '취향이 다른데 가끔은 통한다.',
+    '생각은 다른데 결론은 같았다.',
+  ],
+})
+
 export const nnbMoreRules: Rule[] = [
   nnbDeut,
   nnbDeJosa,
   nnbDePredicate,
+  nnbDeDareun,
   nnbJeom,
   nnbMankeumAdnominal,
   nnbPpunL,

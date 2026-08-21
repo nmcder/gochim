@@ -196,13 +196,49 @@ function fixPlan(found: Diagnostic[], text: string): Diagnostic[] {
   return plan
 }
 
-/** '모두 고치기'가 실제로 고친 건수. 0이면 아무것도 하지 않았다. */
+/**
+ * '모두 고치기'가 실제로 고친 건수. 0이면 아무것도 하지 않았다.
+ *
+ * **여러 번 훑는다.** 한 어절에 오류가 둘 겹쳐 있으면 엔진이 확신도가 높은 하나만 남긴다
+ * (`먹을껄`은 띄어쓰기와 표기가 함께 틀렸다). 한 번만 고치면 `먹을 껄`에서 멈추므로,
+ * 고친 결과를 다시 검사해 남은 것을 마저 고친다.
+ *
+ * 두 번째 회부터는 1층(문자열 규칙)만 쓴다. 형태소 층은 워커에 있어 결과가 늦게 오는데,
+ * 겹침에 밀려 남는 쪽은 거의 언제나 1층이라 이것으로 충분하다.
+ */
+const MAX_FIX_PASSES = 3
+
 function fixAll(): number {
   if (!session) return 0
-  const text = session.target.getText()
-  const plan = fixPlan(wholeDiagnostics(), text)
-  if (plan.length === 0) return 0
+  let fixed = 0
+  // 첫 회만 미리 받아 둔 진단(형태소 층 포함)을 쓴다.
+  let ready: Diagnostic[] | null = wholeDiagnostics()
 
+  for (let pass = 0; pass < MAX_FIX_PASSES; pass += 1) {
+    const text = session.target.getText()
+    const plan = fixPlan(ready ?? layerOneDiagnostics(text), text)
+    if (plan.length === 0) break
+    applyPlan(plan, text)
+    fixed += plan.length
+    ready = null
+  }
+
+  scheduleCheck(0)
+  return fixed
+}
+
+/** 형태소 워커를 기다리지 않는 즉시 검사. '모두 고치기'의 두 번째 회부터 쓴다. */
+function layerOneDiagnostics(text: string): Diagnostic[] {
+  if (!session || !settings?.enabled || !ignoreStore) return []
+  return check(text, {
+    ignore: ignoreStore.keys(),
+    minConfidence: settings.minConfidence,
+    ...(settings.categories.length > 0 ? { categories: settings.categories } : {}),
+  })
+}
+
+function applyPlan(plan: Diagnostic[], text: string): void {
+  if (!session) return
   if (session.target.kind === 'field') {
     // textarea·input은 값이 문자열 하나다. 한 번에 갈아 끼우면 되돌리기도 한 번에 된다.
     // 열 곳을 고치고 Ctrl+Z를 열 번 눌러야 한다면 되돌린다는 느낌이 들지 않는다.
@@ -223,9 +259,6 @@ function fixAll(): number {
     // 한 곳씩 바꿔서 주변 마크업을 살린다.
     for (const d of plan) session.target.replaceRange(d.start, d.end, d.suggestions[0] ?? '')
   }
-
-  scheduleCheck(0)
-  return plan.length
 }
 
 let session: Session | null = null

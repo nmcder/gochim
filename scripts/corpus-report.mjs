@@ -49,15 +49,33 @@ function locate(source, errors) {
  *
  * 경고는 뺀다. 정답은 규정이 허용하는 표기를 그대로 두기로 한 판정이라
  * 경고까지 적용하면 정답과 어긋나는 게 당연하다.
+ *
+ * 확장과 마찬가지로 **여러 번 훑는다**. 한 어절에 오류가 둘 겹치면 엔진이 하나만 남기므로
+ * (`먹을껄` = 띄어쓰기 + 표기) 한 번만 고치면 `먹을 껄`에서 멈춘다.
  */
-function applyAll(source, diagnostics) {
+const MAX_PASSES = 3
+
+function applyOnce(source, diagnostics) {
   let out = source
   let earliest = Number.POSITIVE_INFINITY
+  let changed = 0
   for (const d of [...diagnostics].filter((x) => x.severity !== 'warning').sort((a, b) => b.start - a.start)) {
     if (d.suggestions[0] == null) continue
     if (d.end > earliest) continue
     out = out.slice(0, d.start) + d.suggestions[0] + out.slice(d.end)
     earliest = d.start
+    changed += 1
+  }
+  return { out, changed }
+}
+
+function applyAll(source, diagnostics) {
+  let { out, changed } = applyOnce(source, diagnostics)
+  for (let pass = 1; pass < MAX_PASSES && changed > 0; pass += 1) {
+    const again = applyOnce(out, run(out))
+    if (again.changed === 0) break
+    out = again.out
+    changed = again.changed
   }
   return out
 }
