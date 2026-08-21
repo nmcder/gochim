@@ -124,6 +124,19 @@ const UNIT_NNB = new Set(['명', '개', '권', '장', '시', '분', '원', '번'
  */
 const NOT_REALLY_NNB = new Set(['엔', '내', '건', '란'])
 
+/**
+ * 잘라 낸 조각이 이것이면 가르지 않는다.
+ *
+ * `-ㄹ걸`은 후회·추측을 나타내는 **종결어미**라 붙여 쓴다(`그때 참을걸`).
+ * 의존명사 `것을`이 줄어든 `걸`(`먹을 걸 남겨 뒀다`)과 글자가 똑같고,
+ * 분석기는 둘 다 `거/NNB + ㄹ/JKO`로 읽어 갈라 주지 못한다.
+ * 붙여 쓴 쪽이 옳은 자리가 훨씬 흔하므로 손대지 않는다. 1층도 같은 판단을 하고 있다.
+ *
+ * 잘못 적은 `껄`도 함께 막는다. 가르고 나면 `먹을 껄`이 되어 표기를 고치는
+ * [eomi-geol](../rules/endings.ts)이 닿지 못한다. 붙여 둬야 `먹을걸`까지 간다.
+ */
+const KEEP_JOINED_TAIL = new Set(['걸', '껄'])
+
 /* ─────────────────────────── 부사 + 용언 ─────────────────────────── */
 
 /**
@@ -334,6 +347,7 @@ export const morphEojeolSplit: MorphRule = {
         if (at == null || at <= 0 || at >= trimmed.length) continue
         if (trimmed.length - at < minTail(kind)) continue
         if (kind === 'noun' && NOUN_KEEP_TAIL.has(trimmed[at]!)) continue
+        if (KEEP_JOINED_TAIL.has(trimmed.slice(at))) continue
         // 같은 자리를 두 번 자르지 않는다.
         if (cuts.some((c) => c.at === at)) continue
 
@@ -442,5 +456,7 @@ export const morphEojeolSplit: MorphRule = {
     '그는 밤새 눈물바람이었다.',
     '이 문제는 결국 시간문제였다.',
     '오늘따라 길이 유난히 막힌다.',
+    '그냥 여기서 먹을걸 괜히 나왔나 싶었다.',
+    '그때 조금만 더 참을걸.',
   ],
 }
