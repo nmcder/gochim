@@ -128,6 +128,9 @@ for (const text of corpus.texts) {
       warned += 1
       return
     }
+    // 정답 하나를 진단 둘이 나눠 맡는 일이 있다 — `해결 될줄아냐고`는 붙이기와 가르기가 함께 걸린다.
+    // 짝이 못 지어졌을 뿐 정답 구간 안이라면 과교정이 아니다. 정답과 아예 겹치지 않는 것만 센다.
+    if (gold.some((g) => Math.min(d.end, g.end) - Math.max(d.start, g.start) > 0)) return
     extra += 1
     allExtra.push({ register: text.register, ruleId: d.ruleId, text: d.text, suggestion: d.suggestions[0] })
   })

@@ -403,7 +403,7 @@ export const josaBoda = defineRule({
       refs: ['한글 맞춤법 제41항'],
     }
   },
-  examples: [{ wrong: '약속시간 보다 한 시간이나 늦었다.', right: '약속시간보다 한 시간이나 늦었다.' }],
+  examples: [{ wrong: '동생 보다 한 시간이나 늦었다.', right: '동생보다 한 시간이나 늦었다.' }],
   counterExamples: ['보다 나은 내일을 위하여.', '생각보다 쉬웠다.', '어젯밤엔 영화 보다 소파에서 그대로 잠들었다.'],
 })
 

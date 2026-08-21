@@ -96,7 +96,15 @@ const KEEP_JOINED_NOUN = ['다시보기', '다시듣기', '미리보기', '미�
  * `말씀드리다·연락드리다·감사드리다`가 그렇고, 분석기는 이들을 `말씀/NNG + 드리/VV`로 갈라 놓는다.
  * `해-`는 `하다`의 활용형이라 함께 막는다 — `확인해보니까`를 `확인 해보니까`로 가르던 자리다.
  */
-const NOUN_KEEP_STEM = new Set(['하', '해', '되', '돼', '드리', '시키', '당하', '받', '화하', '짓'])
+const NOUN_KEEP_STEM = ['하', '해', '되', '돼', '드리', '시키', '당하', '받', '짓', '화하', '화되', '화시키']
+
+/**
+ * 명사 뒤에서 이 글자로 시작하는 조각은 가르지 않는다.
+ *
+ * 복수 접미사 `-들`이 `듣다`의 활용형 `들은·들어`와 글자가 똑같다.
+ * 분석기가 `친구들은`을 `친구/NNG + 듣/VV`로 읽어 `친구 들은`으로 가르던 자리다.
+ */
+const NOUN_KEEP_TAIL = new Set(['들'])
 
 /* ─────────────────────────── 의존명사 ─────────────────────────── */
 
@@ -134,6 +142,7 @@ const SPLIT_ADVERBS = new Set([
   '한참', '다시', '함부로', '똑바로', '정확히', '분명히', '확실히', '충분히', '완전히',
   '특히', '무조건', '도저히', '반드시', '제발', '잔뜩', '마구', '곧바로', '잘못',
   '정말', '진짜', '너무', '매우', '아주', '조금', '먼저', '일찍', '괜히', '얼마나',
+  '제일', '제대로',
 ])
 
 /**
@@ -141,9 +150,21 @@ const SPLIT_ADVERBS = new Set([
  *
  * `-하다·-되다`는 부사에 붙어 한 낱말이 되는 일이 흔하다 —
  * `잘못하다·계속하다·오래되다·잘못되다`. 분석기가 이들을 갈라 놓는 일이 있어
- * 어간 쪽에서 막는다. 그 대가로 `열심히하겠습니다`는 놓친다.
+ * 어간 쪽에서 막는다.
  */
 const ADVERB_KEEP_STEM = new Set(['하', '되'])
+
+/**
+ * 다만 이 부사들 뒤에서는 `-하다·-되다`도 가른다.
+ *
+ * `열심히하다·천천히하다`라는 낱말은 사전에 없다. 위의 막음은 `잘못하다·계속하다`처럼
+ * 실제로 굳은 짝을 지키려는 것이므로, 굳은 짝이 없음을 확인한 부사는 예외로 둔다.
+ */
+const ADVERB_HADA_OK = new Set([
+  '열심히', '천천히', '조용히', '골고루', '몰래', '억지로', '우연히', '실컷', '대충',
+  '얼른', '갑자기', '살짝', '슬쩍', '부지런히', '꾸준히', '아무리', '많이', '훨씬',
+  '일찍', '먼저', '괜히', '제대로', '똑바로', '함부로', '확실히', '분명히', '정확히',
+])
 
 /** 부사와 어간이 붙어 한 낱말이 되는 짝. `오래가다`가 그렇다. */
 const KEEP_JOINED_PAIR = new Set(['오래+가'])
@@ -250,14 +271,20 @@ function cutKind(word: Word, i: number): Kind | null {
   if (FREE_NOUN.has(prev.pos) && VERBAL.has(cur.pos)) {
     // 한 음절 명사는 분석기가 짐작으로 만들어 낸 것일 때가 많다 — `누우세요`를 `누/NNG + 울/VV`로 읽었다.
     if (prev.text.length < 2) return null
-    if (NOUN_KEEP_STEM.has(cur.text)) return null
+    // 어간의 첫머리만 본다 — `확인해보니까`의 `해보`처럼 활용형이 이어 붙어 나오기도 한다.
+    if (NOUN_KEEP_STEM.some((stem) => cur.text.startsWith(stem))) return null
     return 'noun'
   }
 
-  if (prev.pos === 'MAG' && SPLIT_ADVERBS.has(prev.text) && VERBAL.has(cur.pos)) {
-    if (ADVERB_KEEP_STEM.has(cur.text)) return null
+  if (prev.pos === 'MAG' && SPLIT_ADVERBS.has(prev.text)) {
     if (KEEP_JOINED_PAIR.has(`${prev.text}+${cur.text}`)) return null
-    return 'adverb'
+    if (VERBAL.has(cur.pos)) {
+      if (ADVERB_KEEP_STEM.has(cur.text) && !ADVERB_HADA_OK.has(prev.text)) return null
+      return 'adverb'
+    }
+    // 부사 뒤의 부사·명사도 별개의 단어다 — `제일먼저`, `다시한번`, `일찍예매했는데`.
+    if (cur.pos === 'MAG' && SPLIT_ADVERBS.has(cur.text)) return 'adverb'
+    if (cur.pos === 'NNG') return 'adverb'
   }
 
   if (prev.pos === 'EC' && SPACED_EC.has(prev.text)) {
@@ -306,6 +333,7 @@ export const morphEojeolSplit: MorphRule = {
         const at = splitPoint(word, i, trimmed)
         if (at == null || at <= 0 || at >= trimmed.length) continue
         if (trimmed.length - at < minTail(kind)) continue
+        if (kind === 'noun' && NOUN_KEEP_TAIL.has(trimmed[at]!)) continue
         // 같은 자리를 두 번 자르지 않는다.
         if (cuts.some((c) => c.at === at)) continue
 
@@ -406,6 +434,9 @@ export const morphEojeolSplit: MorphRule = {
     '그릇을 깨뜨려 버렸다.',
     '창밖에는 눈이 쌓여있었다.',
     '김치찌개는 겨울에 더 맛있다.',
+    '어제 학교 끝나고 친구들이랑 밥 먹으러 갔다.',
+    '메뉴판을 다시 확인해보니까 이름이 달랐다.',
+    '이 결과를 전국 단위로 일반화해서는 안 된다.',
     '위험을 무릅쓰고 나섰다.',
     '사과가 두 개나 남았다.',
     '그는 밤새 눈물바람이었다.',
