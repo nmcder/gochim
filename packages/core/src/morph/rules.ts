@@ -1,5 +1,6 @@
 import { josa } from '../hangul.js'
 import type { MorphFinding, MorphRule, MorphRuleContext, Word } from '../types.js'
+import { morphEojeolSplit } from './eojeol.js'
 import { morphemeOffset } from './words.js'
 
 /**
@@ -29,6 +30,14 @@ const UNIT_NNB = new Set(['명', '개', '권', '장', '시', '분', '원', '번'
 
 /** 동사·부사로도 쓰여 분석기가 자주 헷갈리는 말. 붙이면 뜻이 바뀌므로 손대지 않는다. */
 const RISKY_JOSA = new Set(['같이', '만치'])
+
+/**
+ * 분석기가 의존명사로 잘못 읽는 표면형.
+ *
+ * `어젯밤엔`을 `어젯밤/NNG + 엔/NNB`으로, `한내마을`을 `한/MM + 내/NNB + 마을/NNG`으로
+ * 읽는다. 둘 다 의존명사가 아니다. 사전에 없는 말을 만나면 분석기가 짐작하는 자리다.
+ */
+const NOT_REALLY_NNB = new Set(['엔', '내', '건', '란'])
 
 /**
  * `보다`는 셋으로 갈린다 — 조사(생각보다), 부사(보다 나은), 동사(영화 보다 잠들었다).
@@ -75,6 +84,10 @@ export const morphNnbSpacing: MorphRule = {
       const nnb = word.morphemes[index]!.text
       const previousPos = word.morphemes[index - 1]?.pos ?? ''
       if (UNIT_NNB.has(nnb) && !['SN', 'NR', 'MM'].includes(previousPos)) continue
+
+      if (NOT_REALLY_NNB.has(nnb)) continue
+      // `그분·이분·저분·윗분·여러분`은 관형사와 붙어 한 낱말이 된 말이다.
+      if (nnb === '분' && previousPos === 'MM') continue
 
       const at = morphemeOffset(word, index)
       if (at == null) continue
@@ -152,4 +165,4 @@ export const morphJosaAttach: MorphRule = {
   ],
 }
 
-export const allMorphRules: MorphRule[] = [morphNnbSpacing, morphJosaAttach]
+export const allMorphRules: MorphRule[] = [morphNnbSpacing, morphJosaAttach, morphEojeolSplit]

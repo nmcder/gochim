@@ -25,6 +25,7 @@ export { insideQuotes, protectedRanges } from './protect.js'
 export * from './hangul.js'
 export { allRules } from './rules/index.js'
 export { allMorphRules, morphJosaAttach, morphNnbSpacing } from './morph/rules.js'
+export { morphEojeolSplit } from './morph/eojeol.js'
 export { groupWords, morphemeOffset } from './morph/words.js'
 export { defineLexicon, defineRule } from './rules/define.js'
 export type {
