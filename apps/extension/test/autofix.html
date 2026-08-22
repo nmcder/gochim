@@ -37,6 +37,28 @@
       <pre id="ime-result">아직</pre>
     </section>
 
+    <section>
+      <h2>3. 한 낱말만 치고 손을 뗌 — 마지막 어절도 고쳐지는가</h2>
+      <textarea id="alone"></textarea>
+      <pre id="alone-result">아직</pre>
+    </section>
+
+    <section>
+      <h2>4. 이어 치기 — 낱말이 끝나는 대로 고쳐지는가</h2>
+      <textarea id="cont"></textarea>
+      <pre id="cont-result">아직</pre>
+    </section>
+
+    <section>
+      <h2>5. 다 못 친 낱말 — 손이 멈춰도 건드리지 않는가</h2>
+      <p class="lede">
+        <code>후들거</code>까지 치고 멈추면 <code>후들 거</code>로 고칠 수 있는 자리입니다.
+        여기서 손대면 이어 치는 <code>린다</code>가 엉뚱한 말이 됩니다. 그대로 남아야 통과입니다.
+      </p>
+      <textarea id="partial"></textarea>
+      <pre id="partial-result">아직</pre>
+    </section>
+
     <script>
       // 확장 밖에서 도는 페이지라 chrome.* API가 없다. 설정을 직접 주입한다.
       // 형태소 층은 끈다 — 여기서 보려는 것은 커서 다루기지 교정 실력이 아니다.
@@ -87,13 +109,43 @@
       ;(async () => {
         const fast = document.getElementById('fast')
         await typeInto(fast, '안녕하세요 참 않됬네요 화이팅', 40)
-        await sleep(2500)
-        report('fast-result', fast, '안녕하세요 참 안 됐네요 화이팅')
+        await sleep(1200)
+        fast.blur()
+        await sleep(1200)
+        report('fast-result', fast, '안녕하세요 참 안 됐네요 파이팅')
 
         const ime = document.getElementById('ime')
         await typeComposing(ime, '안녕하세요 참 않됬네요 화이팅', 30)
+        await sleep(1200)
+        ime.blur()
+        await sleep(1200)
+        report('ime-result', ime, '안녕하세요 참 안 됐네요 파이팅')
+
+        const alone = document.getElementById('alone')
+        await typeInto(alone, '않돼', 40)
+        await sleep(1200)
+        alone.blur()
+        await sleep(1200)
+        report('alone-result', alone, '안 돼')
+
+        const cont = document.getElementById('cont')
+        await typeInto(cont, '않돼', 40)
+        await sleep(1600)
+        await typeInto(cont, ' 그래서 어쩌라고', 40)
+        await sleep(1200)
+        cont.blur()
+        await sleep(1200)
+        report('cont-result', cont, '안 돼 그래서 어쩌라고')
+
+        const partial = document.getElementById('partial')
+        await typeInto(partial, '다리가 후들거', 40)
         await sleep(2500)
-        report('ime-result', ime, '안녕하세요 참 안 됐네요 화이팅')
+        report('partial-result', partial, '다리가 후들거')
+        await typeInto(partial, '린다', 40)
+        await sleep(1200)
+        partial.blur()
+        await sleep(1200)
+        report('partial-result', partial, '다리가 후들거린다')
 
         document.title = '끝'
       })()

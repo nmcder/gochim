@@ -174,11 +174,31 @@ const AUTOFIX_IDLE_MS = 700
  * 커서가 놓인 낱말은 아직 쓰는 중이므로 손대면 안 된다. 그래서 **커서 앞의 마지막
  * 공백**을 경계로 삼고, 그 앞에서 끝나는 진단만 고친다.
  * 공백이 아니라 문장부호를 경계로 쓰면 `않됬네요.`처럼 마침표가 붙은 자리를 놓친다.
+ *
+ * ## 왜 지금 치는 낱말은 건드리면 안 되는가
+ *
+ * 다 못 친 낱말은 **거의 언제나 틀린 말처럼 보인다.** 정상 문장 900개를 한 글자씩
+ * 쳐 나가며 세어 보니, 아직 진행 중인 어절에 진단이 붙는 자리가 24가지 나왔다.
+ *
+ *   후들거   → `후들 거`   (치던 말은 `후들거린다`)
+ *   시큰거   → `시큰 거`   (치던 말은 `시큰거려요`)
+ *   성실할뿐 → `성실할 뿐` (치던 말은 `성실할뿐더러`)
+ *   안간     → `안 간`     (치던 말은 `안간힘`)
+ *   않       → `안`        (치던 말은 `않았다`)
+ *
+ * 손이 잠깐 멈췄다고 고쳐 버리면 이것들이 전부 사고가 된다.
+ * 그래서 마지막 어절은 **낱말이 끝났다는 신호**가 올 때까지 기다린다 —
+ * 뒤에 공백이나 문장부호가 오거나, 입력칸에서 손을 뗄 때다.
  */
 function settledBefore(text: string, caret: number): number {
   let at = Math.min(caret, text.length)
   while (at > 0 && !/\s/.test(text[at - 1] ?? '')) at -= 1
   return at
+}
+
+/** 방금 낱말 하나가 끝났는가. 끝났으면 기다릴 이유가 없다. */
+function justEndedWord(text: string, caret: number): boolean {
+  return /[\s.,!?…;:)\]}"']/.test(text[caret - 1] ?? '')
 }
 
 /**
@@ -202,20 +222,25 @@ function settledBefore(text: string, caret: number): number {
  * 경고는 "규정이 이쪽도 허용한다"는 안내다(`좀더`, `둘다`).
  * 묻지 않고 바꿔 버리면 글쓴이가 고른 표기를 빼앗는 셈이 된다.
  */
-function autoFix(): boolean {
+function autoFix(final = false): boolean {
   if (!session || settings?.autoFix !== true) return false
   if (session.composing) return false
   // 손을 댄 적 없는 칸은 건드리지 않는다. 남이 써 둔 댓글을 고치려고 눌렀을 뿐인데
   // 클릭만으로 글이 바뀌면 놀란다. 이미 써 둔 글은 Alt+Shift+F가 맡는다.
   if (session.lastInput === 0) return false
-  if (Date.now() - session.lastInput < AUTOFIX_IDLE_MS) {
+
+  const text = session.target.getText()
+  const caret = caretOf(session.target)
+
+  // 낱말이 방금 끝났으면 기다릴 이유가 없다. 커서가 어절 경계에 있어 끌려갈 일도 없다.
+  // 이 길이 없으면 공백을 친 뒤로도 1초 가까이 아무 일이 없어 고장난 것처럼 보인다.
+  if (!final && !justEndedWord(text, caret) && Date.now() - session.lastInput < AUTOFIX_IDLE_MS) {
     scheduleCheck(AUTOFIX_IDLE_MS)
     return false
   }
 
-  const text = session.target.getText()
-  const caret = caretOf(session.target)
-  const boundary = settledBefore(text, caret)
+  // 손을 뗄 때는 마지막 어절까지 본다. 그때는 다 쓴 것이 확실하다.
+  const boundary = final ? text.length + 1 : settledBefore(text, caret)
 
   const plan = session.diagnostics
     .filter((d) => d.severity !== 'warning' && d.end < boundary && d.suggestions[0] != null)
@@ -230,14 +255,16 @@ function autoFix(): boolean {
     // 뒤에서 앞으로 가므로 겹치는 것은 이미 고른 뒤엣것만 남긴다.
     if (d.end > earliest) continue
     const replacement = d.suggestions[0] ?? ''
-    session.target.replaceRange(d.start, d.end, replacement)
+    // 손을 뗀 뒤에는 초점을 건드리지 않고 쓴다. 안 그러면 옮겨 간 자리에서 초점을 도로 끌어온다.
+    session.target.replaceRange(d.start, d.end, replacement, final)
     moved += replacement.length - (d.end - d.start)
     earliest = d.start
     fixed += 1
   }
   if (fixed === 0) return false
 
-  session.target.setCaret(moved)
+  // 손을 뗀 뒤라면 커서를 되돌릴 것이 없다. 오히려 초점을 다시 끌어올 수 있다.
+  if (!final) session.target.setCaret(moved)
   return true
 }
 
@@ -475,6 +502,13 @@ document.addEventListener('focusin', (event) => {
 
 // 한글은 자모를 모으는 동안 조합 상태로 잡혀 있다. 그 사이에 다른 자리를 고치면
 // 조합이 깨져 치던 글자가 통째로 날아간다. 조합이 끝난 뒤에 다시 본다.
+// 입력칸에서 손을 떼는 순간이 "다 썼다"는 가장 확실한 신호다.
+// 마지막 어절은 이때 고친다 — 치는 도중에는 다 못 친 낱말과 구별할 방법이 없다.
+document.addEventListener('focusout', (event) => {
+  if (!session || event.target !== session.target.element) return
+  autoFix(true)
+})
+
 document.addEventListener('compositionstart', (event) => {
   if (session && event.target === session.target.element) session.composing = true
 })

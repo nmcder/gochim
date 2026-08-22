@@ -24,8 +24,15 @@ export interface EditableTarget {
   readonly kind: 'field' | 'rich'
   /** 검사할 전체 텍스트. */
   getText(): string
-  /** [start, end) 구간을 갈아 끼운다. 사용자의 되돌리기(Ctrl+Z)를 깨지 않는 방법을 쓴다. */
-  replaceRange(start: number, end: number, replacement: string): void
+  /**
+   * [start, end) 구간을 갈아 끼운다. 사용자의 되돌리기(Ctrl+Z)를 깨지 않는 방법을 쓴다.
+   *
+   * `quiet`를 주면 **초점을 건드리지 않는다.** 되돌리기 스택을 지키는 `execCommand`는
+   * 초점을 요구하는데, 손을 뗀 뒤에 그걸 쓰면 사용자가 옮겨 간 자리에서 초점을 도로
+   * 끌어온다 — 다음 칸으로 넘어가려던 Tab이 되돌아오고, 누르려던 단추가 안 눌린다.
+   * 그 자리에서는 되돌리기 한 칸을 포기하고 초점을 지킨다.
+   */
+  replaceRange(start: number, end: number, replacement: string, quiet?: boolean): void
   /**
    * 커서를 이 자리로 옮긴다.
    *
@@ -56,16 +63,18 @@ function fieldTarget(element: HTMLTextAreaElement | HTMLInputElement): EditableT
     element,
     kind: 'field',
     getText: () => element.value,
-    replaceRange(start, end, replacement) {
+    replaceRange(start, end, replacement, quiet = false) {
       // execCommand는 낡았지만, 입력칸의 되돌리기 스택을 유지하는 유일한 방법이다.
       // 실패하면 값을 직접 바꾸고 input 이벤트를 흉내 낸다(리액트 같은 프레임워크가 알아채도록).
-      element.focus()
-      element.setSelectionRange(start, end)
-      const inserted = document.execCommand('insertText', false, replacement)
+      if (!quiet) {
+        element.focus()
+        element.setSelectionRange(start, end)
+      }
+      const inserted = quiet ? false : document.execCommand('insertText', false, replacement)
       if (!inserted) {
         const value = element.value
         element.value = value.slice(0, start) + replacement + value.slice(end)
-        element.setSelectionRange(start + replacement.length, start + replacement.length)
+        if (!quiet) element.setSelectionRange(start + replacement.length, start + replacement.length)
         element.dispatchEvent(new Event('input', { bubbles: true }))
       }
     },
@@ -81,18 +90,18 @@ function richTarget(element: HTMLElement): EditableTarget {
     element,
     kind: 'rich',
     getText: () => readText(element).text,
-    replaceRange(start, end, replacement) {
+    replaceRange(start, end, replacement, quiet = false) {
       const range = rangeFor(element, start, end)
       if (!range) return
       const selection = window.getSelection()
-      if (!selection) return
-      selection.removeAllRanges()
-      selection.addRange(range)
-      if (!document.execCommand('insertText', false, replacement)) {
-        range.deleteContents()
-        range.insertNode(document.createTextNode(replacement))
-        element.dispatchEvent(new Event('input', { bubbles: true }))
+      if (!quiet && selection) {
+        selection.removeAllRanges()
+        selection.addRange(range)
+        if (document.execCommand('insertText', false, replacement)) return
       }
+      range.deleteContents()
+      range.insertNode(document.createTextNode(replacement))
+      element.dispatchEvent(new Event('input', { bubbles: true }))
     },
     setCaret(offset) {
       const range = rangeFor(element, offset, offset)
