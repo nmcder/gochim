@@ -71,23 +71,30 @@ interface Session {
  */
 let morphClient: MorphClient | null = null
 
-function workerUrl(): string | null {
-  const override = (globalThis as { __gochimWorkerUrl?: string }).__gochimWorkerUrl
-  if (override) return override
-  if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) return chrome.runtime.getURL('garu/morph-worker.js')
-  return null
+/**
+ * 워커를 직접 만들 URL.
+ *
+ * 확장 안에서는 **비워 둔다.** 콘텐츠 스크립트는 페이지의 출처를 쓰기 때문에
+ * `chrome-extension://` 스크립트로 워커를 만들면 브라우저가 막는다. 그때는 서비스 워커를
+ * 거쳐 오프스크린 문서에 묻는다. 여기서 값을 돌려주는 것은 스모크 테스트 페이지처럼
+ * `chrome.*`가 없는 자리뿐이다.
+ */
+function workerUrl(): string | undefined {
+  return (globalThis as { __gochimWorkerUrl?: string }).__gochimWorkerUrl
 }
 
 function ensureMorphClient(): MorphClient | null {
   if (morphClient) return morphClient
   const url = workerUrl()
-  if (!url) return null
   morphClient = createMorphClient({
-    workerUrl: url,
+    ...(url ? { workerUrl: url } : {}),
     onResult(diagnostics) {
       if (!session) return
       session.morph = diagnostics
       paint()
+      // 형태소 결과는 1층보다 늦게 온다. 자동 고침은 이 자리에서 한 번 더 봐야 한다 —
+      // 안 그러면 3층만 잡는 오류(`물이끓으면`·`많이내리기`)가 영영 고쳐지지 않는다.
+      if (autoFix()) scheduleCheck(0)
     },
     onError() {
       // 분석기를 못 불러와도 1층은 그대로 돈다. 조용히 끈다.

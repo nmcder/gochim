@@ -16,6 +16,8 @@ export type WorkerRequest = { id: number; text: string; ignore: string[] }
 export type WorkerResponse =
   | { type: 'ready'; initMs: number }
   | { type: 'result'; id: number; diagnostics: Diagnostic[] }
+  /** 더 새로운 요청이 들어와 버린 요청. 기다리는 쪽이 영영 매달리지 않도록 알려 준다. */
+  | { type: 'dropped'; id: number }
   | { type: 'error'; message: string }
 
 let analyzer: GochimAnalyzer | null = null
@@ -61,6 +63,9 @@ async function drain(): Promise<void> {
 }
 
 self.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
+  // 타이핑 중에는 앞선 요청이 이미 쓸모없다. 다만 **버렸다는 사실은 알려야** 한다 —
+  // 답을 기다리던 쪽이 영영 매달린 채 남으면 메시지 채널이 새어 나간다.
+  if (pending) post({ type: 'dropped', id: pending.id })
   pending = event.data
   void drain()
 })

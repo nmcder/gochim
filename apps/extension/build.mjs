@@ -44,6 +44,8 @@ const targets = [
   { entryPoints: [resolve(ROOT, 'src/background.ts')], outfile: resolve(OUT, 'background.js'), format: 'esm' },
   { entryPoints: [resolve(ROOT, 'src/options/index.ts')], outfile: resolve(OUT, 'options.js'), format: 'esm' },
   { entryPoints: [resolve(ROOT, 'src/popup/index.ts')], outfile: resolve(OUT, 'popup.js'), format: 'esm' },
+  // 오프스크린 문서 — 형태소 워커를 확장의 출처에서 만드는 유일한 자리.
+  { entryPoints: [resolve(ROOT, 'src/offscreen/index.ts')], outfile: resolve(OUT, 'offscreen.js'), format: 'esm' },
   // 형태소 워커는 garu/ 안에 둔다. WASM과 모델을 바로 옆에 놓기 위해서다.
   {
     entryPoints: [resolve(ROOT, 'src/worker/morph-worker.ts')],
@@ -108,7 +110,7 @@ function validateManifest() {
 
 function report() {
   const manifest = JSON.parse(readFileSync(resolve(OUT, 'manifest.json'), 'utf8'))
-  const files = ['content.js', 'background.js', 'options.js', 'popup.js', 'content.css', 'garu/morph-worker.js']
+  const files = ['content.js', 'background.js', 'options.js', 'popup.js', 'offscreen.js', 'offscreen.html', 'content.css', 'garu/morph-worker.js']
   const total = files.reduce((sum, file) => sum + statSync(resolve(OUT, file)).size, 0)
   console.log(`\n고침 확장 v${manifest.version}`)
   for (const file of files) console.log(`  ${file.padEnd(16)} ${(statSync(resolve(OUT, file)).size / 1024).toFixed(1)} kB`)
