@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>고침 — 자동 고침이 타이핑을 앞지르지 않는가</title>
+    <link rel="stylesheet" href="../dist/content.css" />
+    <style>
+      body { margin: 0; padding: 28px; font: 15px/1.6 'Malgun Gothic', system-ui, sans-serif; background: #fbfaf8; }
+      h1 { font-size: 17px; margin: 0 0 4px; }
+      p.lede { margin: 0 0 20px; color: #5c5a51; font-size: 13px; max-width: 720px; }
+      section { margin-bottom: 22px; max-width: 720px; }
+      h2 { font-size: 12px; color: #8f8c81; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 6px; }
+      textarea { width: 100%; min-height: 72px; padding: 12px; font: 16px/1.7 'Malgun Gothic', system-ui, sans-serif;
+        border: 1px solid #e6e2d8; border-radius: 8px; background: #fff; box-sizing: border-box; }
+      pre { background: #fff; border: 1px solid #e6e2d8; border-radius: 8px; padding: 12px; font-size: 13px;
+        white-space: pre-wrap; margin: 8px 0 0; }
+    </style>
+  </head>
+  <body>
+    <h1>자동 고침이 타이핑을 앞지르지 않는가</h1>
+    <p class="lede">
+      사용자가 겪은 사고를 그대로 재현합니다. 앞 낱말이 자동으로 고쳐지는 순간 커서가 그 자리로 끌려가면,
+      뒤이어 치던 글자가 문장 가운데에 박힙니다 —
+      <code>안녕하세요 참 않됬네요 화이팅</code>이 <code>안녕하세요 참 않 화이팅됬네요</code>가 되던 일입니다.
+      빠르게 치는 손을 흉내 내려고 40ms마다 한 글자씩 넣습니다.
+    </p>
+
+    <section>
+      <h2>1. 빠른 타이핑 — 커서가 제자리에 남는가</h2>
+      <textarea id="fast"></textarea>
+      <pre id="fast-result">아직</pre>
+    </section>
+
+    <section>
+      <h2>2. 한글 조합 중 — 조합이 끝날 때까지 기다리는가</h2>
+      <textarea id="ime"></textarea>
+      <pre id="ime-result">아직</pre>
+    </section>
+
+    <script>
+      // 확장 밖에서 도는 페이지라 chrome.* API가 없다. 설정을 직접 주입한다.
+      // 형태소 층은 끈다 — 여기서 보려는 것은 커서 다루기지 교정 실력이 아니다.
+      window.__gochimSettings = { autoFix: true, morph: false }
+    </script>
+    <script src="../dist/content.js"></script>
+
+    <script>
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+      /** 한 글자씩 넣는다. execCommand를 쓰면 확장이 듣는 input 이벤트가 그대로 발생한다. */
+      async function typeInto(el, text, gap) {
+        el.focus()
+        for (const ch of text) {
+          const at = el.selectionStart ?? el.value.length
+          el.setSelectionRange(at, at)
+          if (!document.execCommand('insertText', false, ch)) {
+            el.setRangeText(ch, at, at, 'end')
+            el.dispatchEvent(new Event('input', { bubbles: true }))
+          }
+          await sleep(gap)
+        }
+      }
+
+      /** 자모를 모으는 동안 조합 상태로 잡혀 있는 것을 흉내 낸다. */
+      async function typeComposing(el, text, gap) {
+        el.focus()
+        for (const ch of text) {
+          el.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
+          await sleep(gap)
+          const at = el.selectionStart ?? el.value.length
+          el.setSelectionRange(at, at)
+          if (!document.execCommand('insertText', false, ch)) {
+            el.setRangeText(ch, at, at, 'end')
+            el.dispatchEvent(new Event('input', { bubbles: true }))
+          }
+          el.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: ch }))
+          await sleep(gap)
+        }
+      }
+
+      function report(id, el, want) {
+        const got = el.value
+        document.getElementById(id).textContent =
+          `결과: ${got}\n커서: ${el.selectionStart}\n기대: ${want}\n${got === want ? 'PASS' : 'FAIL'}`
+      }
+
+      ;(async () => {
+        const fast = document.getElementById('fast')
+        await typeInto(fast, '안녕하세요 참 않됬네요 화이팅', 40)
+        await sleep(2500)
+        report('fast-result', fast, '안녕하세요 참 안 됐네요 화이팅')
+
+        const ime = document.getElementById('ime')
+        await typeComposing(ime, '안녕하세요 참 않됬네요 화이팅', 30)
+        await sleep(2500)
+        report('ime-result', ime, '안녕하세요 참 안 됐네요 화이팅')
+
+        document.title = '끝'
+      })()
+    </script>
+  </body>
+</html>

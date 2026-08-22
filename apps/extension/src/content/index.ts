@@ -47,6 +47,16 @@ interface Session {
    */
   dismissed: string | null
   /**
+   * 한글 조합(IME)이 진행 중인가.
+   *
+   * 한글은 자모를 모아 한 글자를 만드는 동안 브라우저가 **조합 상태**로 잡아 둔다.
+   * 그 사이에 다른 자리를 고치면 조합이 깨져 치던 글자가 통째로 날아간다.
+   * 조합이 끝날 때까지 자동 고침은 손을 대지 않는다.
+   */
+  composing: boolean
+  /** 마지막으로 글자가 들어온 시각. 자동 고침이 타이핑을 앞지르지 않게 하는 데 쓴다. */
+  lastInput: number
+  /**
    * 글 전체를 훑은 결과. 창(4,000자) 밖까지 포함한다.
    *
    * 글이 바뀔 때마다 비우고, '모두 고치기'를 보여 주거나 누를 때만 채운다.
@@ -88,10 +98,24 @@ function ensureMorphClient(): MorphClient | null {
   return morphClient
 }
 
-/** 두 층의 결과를 합쳐 다시 그린다. 같은 자리에 밑줄이 두 번 그어지지 않도록 엔진 규칙으로 정리한다. */
+/**
+ * 두 층의 결과를 합쳐 다시 그린다. 같은 자리에 밑줄이 두 번 그어지지 않도록 엔진 규칙으로 정리한다.
+ *
+ * 자동 고침이 켜져 있으면 **아무것도 그리지 않는다.** 어차피 알아서 고쳐지는 것에
+ * 밑줄을 긋고 카드를 띄우면 고칠 것도 없는 자리에 손이 가게 만든다.
+ * 진단 자체는 그대로 들고 있어야 [autoFix]가 쓸 수 있다.
+ */
 function paint(): void {
   if (!session) return
   session.diagnostics = session.morph.length > 0 ? mergeDiagnostics(session.base, session.morph) : session.base
+  if (settings?.autoFix === true) {
+    session.layer.render([])
+    if (session.suggested) {
+      session.suggested = null
+      popover.hide()
+    }
+    return
+  }
   session.layer.render(session.diagnostics)
   suggestAtCaret()
 }
@@ -137,23 +161,83 @@ function suggestAtCaret(): void {
 }
 
 /**
- * 확신도가 높은 오류를 묻지 않고 고친다.
+ * 타이핑을 앞지르지 않기 위해 기다리는 시간.
  *
- * **커서가 이미 지나간 낱말만** 손댄다. 지금 치고 있는 글자를 바꾸면
- * 글자가 튀어서 입력이 망가진다. 그래서 뒤에 공백이 온 것만 고친다.
+ * 검사 자체는 300ms 뒤에 돌지만 고치는 것은 더 뜸을 들인다. 빨리 치는 사람은
+ * 낱말 사이에서도 손이 멈추지 않아서, 검사 주기에 맞춰 고치면 커서를 계속 뺏는다.
+ */
+const AUTOFIX_IDLE_MS = 700
+
+/**
+ * 이미 지나간 어절의 시작 위치.
+ *
+ * 커서가 놓인 낱말은 아직 쓰는 중이므로 손대면 안 된다. 그래서 **커서 앞의 마지막
+ * 공백**을 경계로 삼고, 그 앞에서 끝나는 진단만 고친다.
+ * 공백이 아니라 문장부호를 경계로 쓰면 `않됬네요.`처럼 마침표가 붙은 자리를 놓친다.
+ */
+function settledBefore(text: string, caret: number): number {
+  let at = Math.min(caret, text.length)
+  while (at > 0 && !/\s/.test(text[at - 1] ?? '')) at -= 1
+  return at
+}
+
+/**
+ * 묻지 않고 알아서 고친다.
+ *
+ * ## 커서를 돌려놓는다
+ *
+ * 이 함수의 사고 대부분이 여기서 났다. `replaceRange`는 갈아 끼운 글 뒤에 커서를
+ * 두고 가는데, 그때 사용자는 이미 다음 낱말을 치고 있다. 커서가 앞으로 끌려가면
+ * 그다음 글자들이 엉뚱한 자리에 박힌다 —
+ * `안녕하세요 참 않됬네요 화이팅`이 `안녕하세요 참 않 화이팅됬네요`가 되는 식이다.
+ * 그래서 고친 길이 차이만큼 커서를 밀어 원래 자리에 돌려놓는다.
+ *
+ * ## 조합 중에는 손대지 않는다
+ *
+ * 한글은 자모를 모으는 동안 브라우저가 조합 상태로 잡아 둔다.
+ * 그 사이에 DOM을 건드리면 조합이 깨져 치던 글자가 날아간다.
+ *
+ * ## 경고는 고치지 않는다
+ *
+ * 경고는 "규정이 이쪽도 허용한다"는 안내다(`좀더`, `둘다`).
+ * 묻지 않고 바꿔 버리면 글쓴이가 고른 표기를 빼앗는 셈이 된다.
  */
 function autoFix(): boolean {
-  const threshold = settings?.autoFixAbove ?? 0
-  if (!session || threshold <= 0) return false
-  const caret = caretOf(session.target)
+  if (!session || settings?.autoFix !== true) return false
+  if (session.composing) return false
+  // 손을 댄 적 없는 칸은 건드리지 않는다. 남이 써 둔 댓글을 고치려고 눌렀을 뿐인데
+  // 클릭만으로 글이 바뀌면 놀란다. 이미 써 둔 글은 Alt+Shift+F가 맡는다.
+  if (session.lastInput === 0) return false
+  if (Date.now() - session.lastInput < AUTOFIX_IDLE_MS) {
+    scheduleCheck(AUTOFIX_IDLE_MS)
+    return false
+  }
+
   const text = session.target.getText()
-  const done = session.diagnostics
-    .filter((d) => d.end < caret && d.confidence >= threshold && /\s/.test(text[d.end] ?? ''))
+  const caret = caretOf(session.target)
+  const boundary = settledBefore(text, caret)
+
+  const plan = session.diagnostics
+    .filter((d) => d.severity !== 'warning' && d.end < boundary && d.suggestions[0] != null)
+    .filter((d) => text.slice(d.start, d.end) === d.text)
     .sort((a, b) => b.start - a.start)
-  const target = done[0]
-  const replacement = target?.suggestions[0]
-  if (!target || replacement == null) return false
-  session.target.replaceRange(target.start, target.end, replacement)
+  if (plan.length === 0) return false
+
+  let moved = caret
+  let earliest = Number.POSITIVE_INFINITY
+  let fixed = 0
+  for (const d of plan) {
+    // 뒤에서 앞으로 가므로 겹치는 것은 이미 고른 뒤엣것만 남긴다.
+    if (d.end > earliest) continue
+    const replacement = d.suggestions[0] ?? ''
+    session.target.replaceRange(d.start, d.end, replacement)
+    moved += replacement.length - (d.end - d.start)
+    earliest = d.start
+    fixed += 1
+  }
+  if (fixed === 0) return false
+
+  session.target.setCaret(moved)
   return true
 }
 
@@ -377,6 +461,8 @@ function attach(target: EditableTarget): void {
     spellcheckWas,
     suggested: null,
     dismissed: null,
+    composing: false,
+    lastInput: 0,
     whole: null,
   }
   scheduleCheck(0)
@@ -387,8 +473,21 @@ document.addEventListener('focusin', (event) => {
   if (target) attach(target)
 })
 
+// 한글은 자모를 모으는 동안 조합 상태로 잡혀 있다. 그 사이에 다른 자리를 고치면
+// 조합이 깨져 치던 글자가 통째로 날아간다. 조합이 끝난 뒤에 다시 본다.
+document.addEventListener('compositionstart', (event) => {
+  if (session && event.target === session.target.element) session.composing = true
+})
+document.addEventListener('compositionend', (event) => {
+  if (!session || event.target !== session.target.element) return
+  session.composing = false
+  session.lastInput = Date.now()
+  scheduleCheck()
+})
+
 document.addEventListener('input', (event) => {
   if (session && event.target === session.target.element) {
+    session.lastInput = Date.now()
     scheduleCheck()
     return
   }
@@ -403,6 +502,11 @@ document.addEventListener(
   (event) => {
     if (popover.contains(event.target as Node)) return
     if (!session) {
+      popover.hide()
+      return
+    }
+    // 자동 고침이 켜져 있으면 밑줄이 없다. 없는 것을 클릭했다고 카드를 띄우면 안 된다.
+    if (settings?.autoFix === true) {
       popover.hide()
       return
     }

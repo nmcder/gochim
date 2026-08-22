@@ -22,12 +22,18 @@ const categoryBox = $('categories')
 const inlineSuggest = $<HTMLInputElement>('inline-suggest')
 const acceptKey = $<HTMLSelectElement>('accept-key')
 const autofix = $<HTMLInputElement>('autofix')
-const autofixValue = $('autofix-value')
 const suppressNative = $<HTMLInputElement>('suppress-native')
 const ignoredList = $<HTMLUListElement>('ignored')
 const ignoredEmpty = $('ignored-empty')
 
-const store = await openIgnoreStore({ name: 'gochim-extension' })
+/**
+ * 무시 사전을 못 열어도 설정 화면은 떠야 한다.
+ *
+ * IndexedDB는 시크릿 창이나 사이트 데이터를 막아 둔 브라우저에서 거절당한다.
+ * 예전에는 이 자리에서 멈춰 화면 전체가 빈 채로 남았다 — 켜고 끄는 스위치까지 죽는다.
+ * 무시 목록만 못 보여 주고 나머지는 그대로 쓰게 한다.
+ */
+const store = await openIgnoreStore({ name: 'gochim-extension' }).catch(() => null)
 let settings = await loadSettings()
 
 enabled.checked = settings.enabled
@@ -59,17 +65,9 @@ suppressNative.addEventListener('change', async () => {
   settings = await saveSettings({ suppressNativeSpellcheck: suppressNative.checked })
 })
 
-const showAutofix = (value: number): void => {
-  autofixValue.textContent = value <= 0 ? '끔' : value.toFixed(2)
-}
-
-autofix.value = String(settings.autoFixAbove)
-showAutofix(settings.autoFixAbove)
-autofix.addEventListener('input', () => {
-  showAutofix(Number(autofix.value))
-})
+autofix.checked = settings.autoFix
 autofix.addEventListener('change', async () => {
-  settings = await saveSettings({ autoFixAbove: Number(autofix.value) })
+  settings = await saveSettings({ autoFix: autofix.checked })
 })
 
 confidence.addEventListener('input', () => {
@@ -99,6 +97,11 @@ for (const category of Object.keys(CATEGORY_LABELS) as Category[]) {
 }
 
 function renderIgnored(): void {
+  if (!store) {
+    ignoredEmpty.textContent = '이 브라우저에서는 무시 목록을 열 수 없습니다.'
+    ignoredEmpty.hidden = false
+    return
+  }
   const entries = store.list()
   ignoredList.replaceChildren()
   ignoredEmpty.hidden = entries.length > 0

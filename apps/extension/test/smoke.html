@@ -88,7 +88,9 @@
     <script>
       // 확장 밖에서 도는 페이지라 chrome.* API가 없다. 워커 위치와 설정을 직접 주입한다.
       window.__gochimWorkerUrl = new URL('../dist/garu/morph-worker.js', location.href).href
-      window.__gochimSettings = { morph: true }
+      // 이 페이지가 보려는 것은 밑줄이 글자 위에 제대로 오는가다.
+      // 자동 고침이 켜져 있으면 밑줄을 아예 그리지 않으므로 여기서는 끈다.
+      window.__gochimSettings = { morph: true, autoFix: false }
     </script>
     <script src="../dist/content.js"></script>
   </body>

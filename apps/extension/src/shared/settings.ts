@@ -36,12 +36,15 @@ export interface Settings {
   /** 팝오버가 열려 있을 때 제안을 받아들이는 키. */
   acceptKey: 'Tab' | 'Enter' | 'Alt+Enter'
   /**
-   * 확신도가 이 값 이상인 오류를 묻지 않고 바로 고친다. 0이면 끔.
+   * 묻지 않고 알아서 고칠지. **기본값은 켜짐이다.**
    *
-   * **커서가 지나간 자리만** 고친다 — 지금 치고 있는 낱말을 건드리면
-   * 글자가 튀어서 타이핑이 망가진다.
+   * 켜면 밑줄도 카드도 뜨지 않는다. 다 쓰고 나서 무언가를 누를 필요가 없다는 것이
+   * 이 도구가 가장 크게 덜어 주는 수고라, 그쪽을 기본으로 둔다.
+   *
+   * **이미 지나간 어절만** 고친다 — 지금 치고 있는 낱말을 건드리면 글자가 튄다.
+   * 고친 뒤에는 커서를 원래 자리로 되돌려 놓고, 한글 조합 중에는 아예 손대지 않는다.
    */
-  autoFixAbove: number
+  autoFix: boolean
   /**
    * 브라우저 기본 맞춤법 검사를 끌지.
    *
@@ -58,7 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
   morph: true,
   inlineSuggest: true,
   acceptKey: 'Tab',
-  autoFixAbove: 0,
+  autoFix: true,
   suppressNativeSpellcheck: true,
 }
 

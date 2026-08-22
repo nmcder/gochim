@@ -120,10 +120,24 @@
         <h2>고치는 방식</h2>
         <div class="row">
           <div class="row__text">
+            <div class="row__title">자동 고침</div>
+            <p class="row__note">
+              묻지 않고 알아서 고칩니다. 켜져 있으면 <strong>밑줄도 카드도 뜨지 않습니다</strong>.
+              지금 치고 있는 낱말은 건드리지 않고, 한 어절을 넘긴 뒤에야 손댑니다.
+              한글을 조합하는 중에는 기다립니다.
+              규정이 양쪽을 다 허용하는 표기(<code>좀더</code>·<code>둘다</code>)는 그대로 둡니다.
+              <strong>글자를 한 자라도 친 칸에서만</strong> 움직입니다 — 남이 써 둔 글을 눌렀을 뿐인데
+              바뀌는 일이 없도록요.
+            </p>
+          </div>
+          <input type="checkbox" id="autofix" />
+        </div>
+        <div class="row">
+          <div class="row__text">
             <div class="row__title">쓰는 도중에 바로 제안</div>
             <p class="row__note">
-              타이핑을 멈추면 커서가 놓인 오류의 고침 카드가 그 자리에 뜹니다.
-              끄면 밑줄을 클릭해야 카드가 나옵니다.
+              자동 고침을 <strong>끈</strong> 경우에만 쓰입니다. 타이핑을 멈추면 커서가 놓인
+              오류의 고침 카드가 그 자리에 뜹니다. 이것도 끄면 밑줄을 클릭해야 카드가 나옵니다.
             </p>
           </div>
           <input type="checkbox" id="inline-suggest" />
@@ -143,20 +157,11 @@
         </div>
         <div class="row">
           <div class="row__text">
-            <div class="row__title">자동 고침 <span id="autofix-value">끔</span></div>
-            <p class="row__note">
-              이 확신도 이상이면 묻지 않고 고칩니다. <strong>커서가 지나간 낱말만</strong> 손대므로
-              지금 치고 있는 글자는 건드리지 않습니다. 0으로 두면 끕니다.
-            </p>
-          </div>
-          <input type="range" id="autofix" min="0" max="1" step="0.02" />
-        </div>
-        <div class="row">
-          <div class="row__text">
             <div class="row__title">모두 고치기</div>
             <p class="row__note">
-              자동 고침은 커서가 지나간 자리만 손댑니다. <strong>이미 써 둔 글</strong>은
-              고침 카드의 '모두 고치기' 단추나 <code>Alt + Shift + F</code>로 한 번에 고칩니다.
+              자동 고침은 지금 쓰고 있는 글만 따라갑니다. <strong>이미 써 둔 글</strong>은
+              <code>Alt + Shift + F</code>로 한 번에 고칩니다(자동 고침을 끈 경우에는
+              고침 카드의 '모두 고치기' 단추로도 됩니다).
               입력칸이면 <code>Ctrl + Z</code> 한 번으로 전부 되돌아갑니다.
             </p>
           </div>

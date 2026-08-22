@@ -26,6 +26,14 @@ export interface EditableTarget {
   getText(): string
   /** [start, end) 구간을 갈아 끼운다. 사용자의 되돌리기(Ctrl+Z)를 깨지 않는 방법을 쓴다. */
   replaceRange(start: number, end: number, replacement: string): void
+  /**
+   * 커서를 이 자리로 옮긴다.
+   *
+   * [replaceRange]는 갈아 끼운 글 **뒤**에 커서를 놓고 간다. 사용자가 이미 다음 낱말을
+   * 치고 있는데 앞쪽을 자동으로 고치면, 그대로 두면 커서가 뒤로 끌려가 글자가 엉킨다.
+   * 그래서 고친 뒤에는 언제나 원래 자리로 되돌려 놓아야 한다.
+   */
+  setCaret(offset: number): void
 }
 
 const FIELD_TYPES = new Set(['text', 'search', 'url', 'email', ''])
@@ -61,6 +69,10 @@ function fieldTarget(element: HTMLTextAreaElement | HTMLInputElement): EditableT
         element.dispatchEvent(new Event('input', { bubbles: true }))
       }
     },
+    setCaret(offset) {
+      const at = Math.max(0, Math.min(offset, element.value.length))
+      element.setSelectionRange(at, at)
+    },
   }
 }
 
@@ -81,6 +93,14 @@ function richTarget(element: HTMLElement): EditableTarget {
         range.insertNode(document.createTextNode(replacement))
         element.dispatchEvent(new Event('input', { bubbles: true }))
       }
+    },
+    setCaret(offset) {
+      const range = rangeFor(element, offset, offset)
+      const selection = window.getSelection()
+      if (!range || !selection) return
+      range.collapse(true)
+      selection.removeAllRanges()
+      selection.addRange(range)
     },
   }
 }
