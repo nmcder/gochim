@@ -23,6 +23,7 @@ const near = (re: RegExp, window = 16) => (ctx: RuleContext) =>
  */
 export const lexicon = defineLexicon({
   id: 'lexicon',
+  autoFixSafe: true,
   category: 'spelling',
   confidence: 0.96,
   entries: [
@@ -397,6 +398,7 @@ export const lexicon = defineLexicon({
  */
 export const confusable = defineLexicon({
   id: 'confusable',
+  autoFixSafe: true,
   category: 'confusable',
   severity: 'warning',
   confidence: 0.9,

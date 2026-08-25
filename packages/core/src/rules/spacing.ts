@@ -42,6 +42,7 @@ const JUNG_HEADS = [
 ]
 export const nnbSu = defineRule({
   id: 'nnb-su',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.96,
   // '수' 뒤에 보조사가 끼어들 수 있다 — '좋을 수만은 없다', '할 수도 있다'.
@@ -93,6 +94,7 @@ export const nnbSuBakke = defineRule({
 
 export const nnbGeot = defineRule({
   id: 'nnb-geot',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.94,
   pattern: /([가-힣])것([이을은도과와만])/g,
@@ -224,6 +226,7 @@ export const nnbGyeom = defineRule({
 
 export const nnbManTime = defineRule({
   id: 'nnb-man-time',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.94,
   pattern: /(\d+\s*(?:년|개월|달|주일|주|일|시간|분|초)|일주일|이틀|사흘|나흘|보름|하루)만에/g,
@@ -396,6 +399,7 @@ const WORD_GIM = new Set(['단김', '술김', '홧김', '얼김'])
 
 export const nnbGim = defineRule({
   id: 'nnb-gim',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: /([가-힣])김에/g,

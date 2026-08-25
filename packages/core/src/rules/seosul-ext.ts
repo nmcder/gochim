@@ -59,6 +59,7 @@ const NNB_AFTER_HAL = /^ (수|것|거|게|때|줄|리|텐데|뿐|만큼|듯|양|
 
 export const seosulHadaExt = defineRule({
   id: 'seosul-hada-ext',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: new RegExp(`(?<![가-힣0-9])(${HADA_NOUNS_EXT.join('|')}) (하|한|할|했|해|함|합)([가-힣]*)`, 'g'),
@@ -161,6 +162,7 @@ function isDoeInflection(head: string, next: string): boolean {
 }
 export const seosulDoeda = defineRule({
   id: 'seosul-doeda',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: new RegExp(`(?<![가-힣0-9])(${DOE_NOUNS.join('|')}) (되|된|될|됐|됩|됨|돼)([가-힣]*)`, 'g'),
@@ -208,6 +210,7 @@ const DEURI_NOUNS = ['말씀','인사','감사','연락','부탁','축하','전�
 const INSA_MODIFIER = new Set(['문안','새해','연말','신년','명절','작별','감사','환영','송별','축하','아침','저녁','귀국','졸업','입학','생일','명함'])
 export const seosulDeurida = defineRule({
   id: 'seosul-deurida',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.93,
   pattern: new RegExp(`(?<![가-힣0-9])(${DEURI_NOUNS.join('|')}) (드리|드립|드려|드릴|드렸|드린|드림)([가-힣]*)`, 'g'),
@@ -255,6 +258,7 @@ export const seosulDeurida = defineRule({
 // ══════════════════ 4. bojo-sipda ══════════════════
 export const bojoSipda = defineRule({
   id: 'bojo-sipda',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.95,
   pattern: /([가-힣])(고|가|나|까)싶/g,
@@ -318,6 +322,7 @@ function isJiInflection(head: string, next: string): boolean {
 }
 export const seosulEojida = defineRule({
   id: 'seosul-eojida',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: new RegExp(`(?<![가-힣])(${EO_STEMS.join('|')}) (지|진|질|졌|짐|집|져)([가-힣]*)`, 'g'),

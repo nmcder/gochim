@@ -17,7 +17,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { allRules, applyFixes, check } from '../packages/core/dist/index.js'
+import { allMorphRules, allRules, applyFixes, check } from '../packages/core/dist/index.js'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf8'))
@@ -357,6 +357,72 @@ must(
   `처음 보는 것 ${proseNew.length}건 · 알려진 것 ${proseHits.length - proseNew.length}건 · ${proseTexts.length}줄`,
 )
 
+/* ── 6. 묻지 않고 고쳐도 되는 규칙인가 ───────────────────────
+ *
+ * `severity`는 "이것이 틀렸는가"라는 **국어적 판정**이고, `autoFixSafe`는 "사람이 보지
+ * 않아도 이 규칙을 믿을 수 있는가"라는 **공학적 판정**이다. 예전에는 둘을 겹쳐 써서,
+ * 국어적으로는 분명히 옳지만 가드가 뚫리는 규칙까지 묻지 않고 적용됐다.
+ *
+ * 규칙이 자격을 얻는 조건은 셋이고 전부 여기서 잰다. 자세한 것은 CONTRIBUTING.md.
+ *   (가) 밖에서 온 정상 글에서 발화 0건
+ *   (나) 표본에서 실제 오류를 한 번이라도 잡은 적이 있다 — '조용해서 안 걸린 것'과 가른다
+ *   (다) 반례가 하나 이상 적혀 있다 — 지은 사람이 오탐을 생각해 봤다는 증거다
+ *
+ * **한 방향으로만 강제한다.** 선언된 true 는 전부 조건을 만족해야 하지만, 조건을
+ * 만족한다고 켜야 하는 것은 아니다. 숫자가 통과해도 위험한 줄 아는 규칙은 꺼 둘 수 있어야 한다.
+ */
+
+const 자동적용규칙 = [...allRules, ...allMorphRules].filter((r) => r.autoFixSafe === true)
+
+// (가) 정상 글에서 **자동 적용될 뻔한** 자리. 규칙 개수가 아니라 실제 사고 건수를 센다.
+const wouldAutoFix = []
+for (const sentence of wild.sentences) {
+  for (const d of check(sentence, analyzer ? { analyzer } : {})) {
+    if (d.autoFixSafe) wouldAutoFix.push(`${d.ruleId}: ${d.text} → ${d.suggestions[0]}  |  ${sentence.slice(0, 40)}`)
+  }
+}
+for (const { file, line } of proseTexts) {
+  for (const d of check(line, analyzer ? { analyzer } : {})) {
+    if (d.autoFixSafe) wouldAutoFix.push(`${d.ruleId}: ${d.text} → ${d.suggestions[0]}  |  ${file}  |  ${line.slice(0, 34)}`)
+  }
+}
+must(
+  `밖에서 온 정상 글에 묻지 않고 손댈 자리 0건 — 규칙 ${자동적용규칙.length}개가 자격을 가짐`,
+  wouldAutoFix.length === 0,
+  `자동 적용될 뻔한 곳 ${wouldAutoFix.length}건`,
+)
+
+// (나)·(다) 선언이 근거를 갖췄는가. 정탐은 재현율 표본에서 규칙별로 센다.
+const 정탐수 = new Map()
+for (const texts of [corpus.texts, prose.paragraphs]) {
+  for (const t of texts) {
+    const found = errorsOf(t.source, true)
+    let cursor = 0
+    for (const e of t.errors) {
+      const at = t.source.indexOf(e.wrongText, cursor)
+      if (at === -1) continue
+      cursor = at
+      const end = at + e.wrongText.length
+      const hit = found.find((d) => Math.min(d.end, end) - Math.max(d.start, at) > 0)
+      if (!hit) continue
+      const id = hit.ruleId.split('/')[0]
+      정탐수.set(id, (정탐수.get(id) ?? 0) + 1)
+    }
+  }
+}
+const 근거없는선언 = []
+for (const r of 자동적용규칙) {
+  const 반례 = r.counterExamples?.length ?? 0
+  const 정탐 = 정탐수.get(r.id) ?? 0
+  if (반례 === 0) 근거없는선언.push(`${r.id} — 반례가 없다. 이 규칙이 건드리면 안 되는 문장을 적을 것`)
+  else if (정탐 === 0) 근거없는선언.push(`${r.id} — 표본에서 한 번도 정탐한 적이 없다. 그 오류가 든 표본을 넣을 것`)
+}
+must(
+  '자동 적용 선언이 전부 근거를 갖췄다',
+  근거없는선언.length === 0,
+  `근거 없는 선언 ${근거없는선언.length}건`,
+)
+
 /**
  * 목록에 있는데 이제 안 나오는 갈래는 **고쳐졌다는 뜻**이다. 알려 주고 지우게 한다.
  * 남겨 두면 목록이 낡아 다음 사람이 무엇이 살아 있는 오탐인지 알 수 없게 된다.
@@ -423,6 +489,19 @@ if (fixedSince.length > 0) {
   console.log()
   console.log(`고쳐진 오탐 ${fixedSince.length}가지 — guard.mjs의 KNOWN_FALSE_POSITIVES에서 지워도 된다`)
   for (const k of fixedSince) console.log(`  ${k}`)
+}
+
+if (wouldAutoFix.length > 0) {
+  console.log()
+  console.log(`자동 적용될 뻔한 정상 문장 (${wouldAutoFix.length}건)`)
+  console.log('  자격을 선언한 규칙이 맞는 글을 건드렸다. 규칙을 고치거나 autoFixSafe 를 내릴 것.')
+  for (const x of wouldAutoFix.slice(0, 20)) console.log(`  ${x}`)
+}
+
+if (근거없는선언.length > 0) {
+  console.log()
+  console.log(`근거 없는 자동 적용 선언 (${근거없는선언.length}건)`)
+  for (const x of 근거없는선언) console.log(`  ${x}`)
 }
 
 analyzer?.destroy()

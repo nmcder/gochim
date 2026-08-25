@@ -135,16 +135,28 @@ function ensureMorphClient(): MorphClient | null {
 function paint(): void {
   if (!session) return
   session.diagnostics = session.morph.length > 0 ? mergeDiagnostics(session.base, session.morph) : session.base
-  if (settings?.autoFix === true) {
-    session.layer.render([])
-    if (session.suggested) {
-      session.suggested = null
-      popover.hide()
-    }
-    return
-  }
-  session.layer.render(session.diagnostics)
+  session.layer.render(shown())
   suggestAtCaret()
+}
+
+/**
+ * 화면에 그릴 진단.
+ *
+ * 자동 고침이 꺼져 있으면 전부 그린다.
+ *
+ * 켜져 있으면 **자동으로 고쳐지지 않을 것만** 그린다. 예전에는 아무것도 안 그렸다.
+ * "어차피 알아서 고쳐지는 것에 밑줄을 긋고 카드를 띄우면 고칠 것도 없는 자리에 손이
+ * 가게 만든다"는 것이 그때의 이유였고, 그때는 자동 고침이 진단을 **전부** 적용했으니
+ * 맞는 말이었다.
+ *
+ * 지금은 자격을 갖춘 규칙만 적용한다. 그러니 아무것도 안 그리면 나머지는
+ * **고쳐지지도 보이지도 않는다.** `학교끝나고`가 그 자리였다 — 자동 고침을 켠 사람에게만
+ * 형태소 층이 통째로 사라지는 셈이라, 도구가 조용해진 게 아니라 눈이 먼 것이 된다.
+ */
+function shown(): Diagnostic[] {
+  if (!session) return []
+  if (settings?.autoFix !== true) return session.diagnostics
+  return session.diagnostics.filter((d) => !d.autoFixSafe)
 }
 
 /** 진단 한 건을 가리키는 자리 열쇠. 글이 바뀌면 오프셋이 달라져 저절로 무효가 된다. */
@@ -152,10 +164,15 @@ function keyOf(d: Diagnostic): string {
   return `${d.start}:${d.end}`
 }
 
-/** 커서가 걸쳐 있는 진단. 방금 친 낱말을 고르기 위해 끝점까지 포함해서 본다. */
+/**
+ * 커서가 걸쳐 있는 진단. 방금 친 낱말을 고르기 위해 끝점까지 포함해서 본다.
+ *
+ * **화면에 그린 것만** 본다. 자동 고침이 곧 손댈 자리에 카드를 띄우면,
+ * 사용자가 누르려는 순간 글자가 이미 바뀌어 있다.
+ */
 function diagnosticAtCaret(caret: number): Diagnostic | null {
   if (!session) return null
-  return session.diagnostics.find((d) => d.start <= caret && caret <= d.end) ?? null
+  return shown().find((d) => d.start <= caret && caret <= d.end) ?? null
 }
 
 /**
@@ -290,7 +307,12 @@ function autoFix(final = false): boolean {
   const boundary = final ? text.length + 1 : settledBefore(text, caret)
 
   const plan = session.diagnostics
-    .filter((d) => d.severity !== 'warning' && d.end < boundary && d.suggestions[0] != null)
+    // **자격을 갖춘 규칙만** 묻지 않고 적용한다. 예전에는 `severity !== 'warning'`이었는데,
+    // severity 는 "이것이 틀렸는가"라는 국어적 판정이라 "사람이 안 봐도 믿을 수 있는가"와
+    // 다른 축이다. 그 둘을 겹쳐 쓴 탓에 국어적으로는 옳지만 가드가 뚫리는 규칙까지
+    // 조용히 적용됐다. 자격 조건은 CONTRIBUTING.md 에 있고 `npm run guard`가 지킨다.
+    // (경고 제외 조건은 엔진이 autoFixSafe 안에 이미 합쳐 두었다)
+    .filter((d) => d.autoFixSafe && d.end < boundary && d.suggestions[0] != null)
     .filter((d) => text.slice(d.start, d.end) === d.text)
     .sort((a, b) => b.start - a.start)
   if (plan.length === 0) return false
@@ -613,7 +635,8 @@ document.addEventListener(
       popover.hide()
       return
     }
-    const hit = session.layer.hitTest(event.clientX, event.clientY, session.diagnostics)
+    // 그린 것만 눌린다. 안 그린 자리에서 카드가 뜨면 밑줄 없는 곳이 반응하는 셈이다.
+    const hit = session.layer.hitTest(event.clientX, event.clientY, shown())
     if (!hit) {
       popover.hide()
       return

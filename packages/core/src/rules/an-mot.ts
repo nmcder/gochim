@@ -77,6 +77,7 @@ const AN_WORDS = [
 
 export const busaAnYongeon = defineRule({
   id: "busa-an-yongeon",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.92,
   pattern: /(?<![가-힣])안(온(?!하|한|함|히|해)|와(?=[서도요])|기다리|기다려|기다렸|기다린|기다릴|어울리|어울려|어울렸|어울린|가르치|가르쳐|가르쳤|일어나|일어났|들어가|들어갔|들어와|들어왔|들어오|움직이|움직여|움직였|무서워|무서운|무서웠|어려워|어려운|어려웠|재미있|바뀌었|나가|나갔|나갈|나간|나오|나와|나왔|나올|나온|무섭|어렵|아프|아파|아팠|아픈|바쁘|바빠|바빴|바쁜|예쁘|예뻐|예뻤|예쁜|이쁘|이뻐|이뻤|이쁜|나쁘|나빠|나빴|나쁜|궁금|필요|중요|심심|깨끗|조용|피곤|멋있|멋지|웃기|재밌|졸리|편하|편해|편했|불편|친하|친해|친했|친한|힘들|힘드|배우|배워|배웠|배운|생기|생겨|생겼|생긴|걸리|걸려|걸렸|걸린|고치|고쳐|고쳤|보내|보냈|보낼|보낸|만나|만났|만날|만난|바뀌|바꿔|바꿨|바꾸|바뀐|챙기|챙겨|챙겼|맞추|맞춰|맞췄|끝나|끝났|시작|통하|통해|떨리|떨려|들리|들려|풀리|풀려|넘어|떨어|들어|들여|올라|내려|괜찮|그러|그래|그랬|그런|그럴|그렇|그럼|지키|지켜|지켰|지킨|지킬|보여|보였|보인|마시|마셔|마셨|가지|가져|가졌|던지|던져|던졌|자르|잘라|잘랐|좋|맞|받|먹|읽|찾|웃|울|열|닫|믿|팔|씻|입|잊|놀|늦|춥|덥|쉽|크|많|높|낮|싫|멀|참|앉|쉬|잡|넣|빼|뽑|끊|깎|줍|짓|볶|삶|굽|씹|켜|켰|끄|꺼|껐|가|갈|갔|간|갑|오|왔|올|옵|하|해|했|한|할|함|합|써|썼|쓰|사|샀|잤)/g,
@@ -191,6 +192,7 @@ const MOT_WORDS = [
 
 export const busaMot = defineRule({
   id: "busa-mot",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.92,
   pattern: /(?<![가-힣])못(기다리|기다려|기다렸|일어나|일어났|들어가|들어갔|들어와|들어왔|들어오|알아듣|알아들|알아봐|알아보|움직이|움직여|움직였|따라가|따라와|따라갔|따라왔|만나|만났|만날|만난|마시|마셔|마셨|견디|견뎌|견뎠|지키|지켜|지켰|지킨|배우|배워|배웠|끝내|끝냈|끝날|끝나|나가|나갔|나갈|나간|나오|나와|나왔|나올|나온|떨어|올라|내려|먹|읽|받|찾|잡|참|믿|웃|울|열|닫|팔|씻|입|신|잊|앉|걷|뛰|놀|넘|듣|들|보|봐|봤|본|볼|봅|가|갔|갈|간|갑|오|와|왔|온|올|옵|자|잤|잘|잔|사|샀)/g,
@@ -262,6 +264,7 @@ export const busaMot = defineRule({
 
 export const bojoMothada = defineRule({
   id: "bojo-mothada",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.93,
   pattern: /(?<=[가-힣])지 못 (하|해|했|한|할|함|합)/g,
@@ -309,6 +312,7 @@ export const bojoMothada = defineRule({
 
 export const josaKkeseo = defineRule({
   id: "josa-kkeseo",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.93,
   pattern: /([가-힣]) (께서|께)(?![끄끔름적죽질])/g,
@@ -366,6 +370,7 @@ const BEFORE_MAN_NUMERAL = /(십|백|천|억|조|몇|수)$|^\d+$/
 
 export const josaMan = defineRule({
   id: "josa-man",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.9,
   pattern: /(?<![가-힣])([가-힣]+) 만 (?=[가-힣])/g,
@@ -429,6 +434,7 @@ const BAKKE_QUANTITY = '절반|하나|한둘|조금|약간|얼마|이만큼|요�
 
 export const josaBakkeSuryang = defineRule({
   id: "josa-bakke-suryang",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.91,
   pattern: /(?<![가-힣])(절반|하나|한둘|조금|약간|얼마|이만큼|요만큼|쥐꼬리) 밖에/g,

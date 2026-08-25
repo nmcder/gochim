@@ -80,6 +80,12 @@ const MAX_PASSES = 4
  *
  * 지나온 결과를 기억해 같은 것이 다시 나오면 멈춘다. 진동을 **숨기지는 않는다** —
  * 멈추기만 할 뿐이라 위 테스트가 그대로 잡아낸다.
+ *
+ * ## 사람이 타자를 치는 동안에는 이것을 쓰지 마라
+ *
+ * `fix`는 `autoFixSafe`를 **일부러 보지 않는다.** 고쳐진 글을 달라고 한 사람은 부분이 아니라
+ * 전부를 원한 것이다. 반면 사용자가 글을 쓰는 중에 묻지 않고 손대는 자리라면
+ * `d.autoFixSafe`로 거른 뒤 `applyFixes`를 쓴다. 확장의 자동 고침이 그렇게 한다.
  */
 export function fix(text: string, options: CheckOptions = {}): string {
   const seen = new Set([text])

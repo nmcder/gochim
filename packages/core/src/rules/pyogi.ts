@@ -5,6 +5,7 @@ import type { Rule } from '../types.js'
 /** '몇 일'은 어떤 문맥에서도 '며칠'이다. 다만 '일본·일식'처럼 '일'로 시작하는 낱말은 건드리지 않는다. */
 export const myeotIlSpaced = defineRule({
   id: 'myeot-il-spaced',
+  autoFixSafe: true,
   category: 'spelling',
   confidence: 0.95,
   pattern: /몇[ \t]+일(?!본|식|어|화|왕|류|요)/,
@@ -57,6 +58,7 @@ const HOST_NOUNS = [
 
 export const iyeotdaCopula = defineRule({
   id: 'iyeotda-copula',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.93,
   pattern: /([가-힣])이였/,
@@ -104,6 +106,7 @@ const PLACES =
 
 export const deulleuda = defineRule({
   id: 'deulleuda-place',
+  autoFixSafe: true,
   category: 'confusable',
   confidence: 0.88,
   // '들려주다·들려오다'는 '들리다'의 사동·복합형이라 뒤 음절로 걸러 낸다.

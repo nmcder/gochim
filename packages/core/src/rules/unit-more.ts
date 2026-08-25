@@ -9,6 +9,7 @@ import type { Rule } from '../types.js'
 
 export const suryangDanwi = defineRule({
   id: "suryang-danwi",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.93,
   pattern: /(?<![가-힣0-9])(열한|열두|열세|열네|열다섯|열여섯|열일곱|열여덟|열아홉|스물한|스물두|스물세|스물네|한두|두세|두어|서너|너덧|네댓|대여섯|예닐곱|일고여덟|여남은|스무|서른|마흔|예순|일흔|여든|아흔|다섯|여섯|일곱|여덟|아홉|여러|첫|한|두|세|네|열)(시간|개월|가지|마리|그릇|송이|켤레|군데|차례|바퀴|걸음|방울|자루|조각|그루|마디|큰술|작은술|숟가락|스푼|모금|봉지|그램|리터|컵|줌|톨|분|초|살|명|개|권|장|잔|병|벌|달|해|번|곳)/g,
@@ -122,6 +123,7 @@ export const suryangDanwi = defineRule({
 
 export const hanjaSuDanwi = defineRule({
   id: "hanja-su-danwi",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.92,
   pattern: /(?<![가-힣0-9])((?:[일이삼사오육칠팔구]?(?:십|백|천|만|억))+[일이삼사오육칠팔구]?|[일이삼사오육칠팔구])(개월|그램|킬로그램|밀리리터|리터|미터|분|초|년|원|명)/g,
@@ -203,6 +205,7 @@ export const hanjaSuDanwi = defineRule({
 
 export const ibeonDaeumJu = defineRule({
   id: "ibeon-daeum-ju",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.93,
   pattern: /(?<![가-힣])(이번|다음|지난)(주말|주중|주초|학기|분기|방학|연휴|시즌|주|달)/g,
@@ -261,6 +264,7 @@ export const ibeonDaeumJu = defineRule({
 
 export const jinanJuBuchim = defineRule({
   id: "jinan-ju-buchim",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.92,
   pattern: /(?<![가-힣])지난[ \t]+(주|달|해|밤|번)/g,
@@ -307,6 +311,7 @@ export const jinanJuBuchim = defineRule({
 
 export const gudeunJisi = defineRule({
   id: "gudeun-jisi",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.93,
   pattern: /(?<![가-힣])(이|그|저|한)[ \t]+(동안|때|중|곳|쪽)/g,
@@ -373,6 +378,7 @@ export const gudeunJisi = defineRule({
 
 export const myeongsaTtae = defineRule({
   id: "myeongsa-ttae",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.93,
   pattern: /(?<![가-힣])((?:초등|중등|고등|중|고|대)?학교|대학원|대학|중학|고교|학원|유치원|어린이집|군대|재수|입시|수능|방학|개학|시험|명절|연휴|휴가|축제|장마|사춘기|신입생|신입|졸업|입학|인턴|알바)때(?!문)/g,
@@ -417,6 +423,7 @@ export const myeongsaTtae = defineRule({
 
 export const jisiMyeongsa = defineRule({
   id: "jisi-myeongsa",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.9,
   pattern: /(?<![가-힣])(이|그)(돈|가게|친구|사람|자리|정도|방법|생각|기분|모습|목소리|문제|이야기|얘기|물건|동네|회사|순간|부분|시절|사건|경험|경우|가격|노래|영화|가방|사진|메뉴|장면|표정|분위기|느낌)/g,
@@ -477,6 +484,7 @@ export const jisiMyeongsa = defineRule({
 
 export const geunsaSu = defineRule({
   id: "geunsa-su",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.92,
   pattern: /(?<![가-힣])(한[ \t]+두|두[ \t]+세|서[ \t]+너|대[ \t]+여섯|예[ \t]+닐곱)(?![가-힣])/g,
@@ -516,6 +524,7 @@ export const geunsaSu = defineRule({
 
 export const siganJisi = defineLexicon({
   id: "sigan-jisi",
+  autoFixSafe: true,
   category: "spacing",
   confidence: 0.92,
   entries: [
@@ -627,6 +636,7 @@ export const siganJisi = defineLexicon({
  */
 export const suryangDae = defineRule({
   id: 'suryang-dae',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.92,
   pattern: /(?<![가-힣0-9])(두|서너|너덧|대여섯|다섯|여섯|일곱|여덟|아홉|열두|스무)대(?![가-힣])/g,
@@ -654,6 +664,7 @@ export const suryangDae = defineRule({
  */
 export const yeoDanwi = defineRule({
   id: 'yeo-danwi',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.92,
   pattern:
@@ -685,6 +696,7 @@ export const yeoDanwi = defineRule({
  */
 export const dangSuffix = defineRule({
   id: 'dang-suffix',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: /(?<![가-힣])(가구|세대|가정|사람|학생|인원|명|개|건|시간|한\s*시간|하루|일|주|달|월|년|회|팀|학급|평|킬로|리터)\s+당(?![가-힣])/g,

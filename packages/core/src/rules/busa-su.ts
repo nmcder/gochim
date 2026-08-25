@@ -124,6 +124,7 @@ const JOM_HEAD =
 
 export const busaJom = defineRule({
   id: 'busa-jom',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.93,
   // 뒤에 한글이 이어지면 잡지 않는다. '좀'이 어절 끝에 있을 때만 부사로 확신할 수 있다.
@@ -268,6 +269,7 @@ export const busaDaGachi = defineRule({
  */
 export const busaDasiHanbeon = defineRule({
   id: 'busa-dasi-hanbeon',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.93,
   // 뒤에는 보조사만 허용한다. 그 밖의 한글이 이어지면 손대지 않는다.

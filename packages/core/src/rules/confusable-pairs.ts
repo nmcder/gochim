@@ -26,6 +26,14 @@ interface Pair {
   explain: string
   examples: Example[]
   counterExamples?: string[]
+  /**
+   * 묻지 않고 적용해도 되는가. 적지 않으면 안 된다는 뜻이다.
+   *
+   * 혼동어는 짝마다 위험이 다르다. `우산을 잊어버리다`처럼 목적어가 판정을 확정 짓는 짝은
+   * 안전하지만, 근거가 되는 말이 문장 밖에 있을 수 있는 짝은 그렇지 않다.
+   * 그래서 규칙 묶음이 아니라 **짝마다** 따로 건다.
+   */
+  autoFixSafe?: boolean
 }
 
 /** 목적어와 서술어 사이에 끼어들 수 있는 부사. 이 정도까지만 허용한다. */
@@ -45,6 +53,7 @@ const JOSA = '(?:은|는|이|가|을|를|도|의|로|으로|부터|까지|만)?'
 const PAIRS: Pair[] = [
   {
     id: 'ilta-vs-itta',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:우산|지갑|가방|열쇠|휴대폰|물건|돈|카드|신발|모자|장갑|이어폰|우비)을\\s*${ADVERBS}잊어버(?=[려렸리])`, 'g'),
     wrong: '잊어버',
     right: '잃어버',
@@ -157,6 +166,7 @@ const PAIRS: Pair[] = [
    */
   {
     id: 'gyeongsin-vs-gaengsin',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:계약|면허|여권|비자|회원증|자격증|인증서|약관|구독|임대차|유효기간)${JOSA}\\s*${GAP}경신`, 'g'),
     wrong: '경신',
     right: '갱신',
@@ -168,6 +178,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'gaengsin-vs-gyeongsin',
+    autoFixSafe: true,
     // 맨 '기록'은 뺐다 — '접속 기록을 갱신한다'처럼 상태를 새로 하는 자리와 겹친다.
     pattern: new RegExp(`(?:최고\\s*기록|신기록|세계\\s*기록|개인\\s*기록|한국\\s*기록|최다|최단|최고치|최저치)${JOSA}\\s*${GAP}갱신`, 'g'),
     wrong: '갱신',
@@ -180,6 +191,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'gyebal-vs-gaebal',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:제품|신제품|기술|프로그램|시스템|소프트웨어|앱|백신|장비|부지|자원|신약|서비스|무기)${JOSA}\\s*${GAP}계발`, 'g'),
     wrong: '계발',
     right: '개발',
@@ -191,6 +203,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'juwi-vs-juui',
+    autoFixSafe: true,
     pattern: /주위(?:를|도)\s*(?:[가-힣]+\s+){0,1}(?=주|받|기울)/g,
     wrong: '주위',
     right: '주의',
@@ -201,6 +214,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'siljeung-vs-silhjeung',
+    autoFixSafe: true,
     pattern: /실증(?:이|도|은)\s*(?:[가-힣]+\s+){0,1}(?=나|난|났|느)/g,
     wrong: '실증',
     right: '싫증',
@@ -211,6 +225,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'neurida-vs-neullida',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:무게|인원|횟수|비용|금액|매출|회원|봉사자|규모|용량|분량|비율|점수|속도|개수|수량|물량|일자리|시간)${JOSA}\\s*${GAP}늘이`, 'g'),
     wrong: '늘이',
     right: '늘리',
@@ -221,6 +236,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'neuryeot-vs-neullyeot',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:무게|인원|횟수|비용|금액|매출|회원|봉사자|규모|용량|분량|비율|점수|속도|개수|수량|물량|일자리|시간)${JOSA}\\s*${GAP}늘였`, 'g'),
     wrong: '늘였',
     right: '늘렸',
@@ -231,6 +247,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'bandeusi-vs-banduti',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:허리|등|어깨|자세|몸|고개|다리|목)${JOSA}\\s*${GAP}반드시\\s*(?=펴|세우|앉|눕|놓)`, 'g'),
     wrong: '반드시',
     right: '반듯이',
@@ -241,6 +258,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'jorida-vs-jolida',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:국물|육수|양념장)${JOSA}\\s*${GAP}조리(?=[는다면고])`, 'g'),
     wrong: '조리',
     right: '졸이',
@@ -251,6 +269,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'anchida-vs-anjida',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:밥|국|찌개|떡|쌀|콩)${JOSA}\\s*${GAP}앉혀`, 'g'),
     wrong: '앉혀',
     right: '안쳐',
@@ -261,6 +280,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'butda-vs-bulda',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:면|국수|라면|사리|미역|당면)${JOSA}\\s*${GAP}불기(?=\\s*전)`, 'g'),
     wrong: '불기',
     right: '붇기',
@@ -271,6 +291,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'buchida-vs-buchida-post',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:우편|택배|소포|등기|편지|우체국)${JOSA}\\s*${GAP}붙여`, 'g'),
     wrong: '붙여',
     right: '부쳐',
@@ -281,6 +302,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'buchida-vs-buchida-stick',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:안내문|공지|공지문|포스터|벽보|전단|스티커|메모|쪽지)${JOSA}\\s*${GAP}부쳐`, 'g'),
     wrong: '부쳐',
     right: '붙여',
@@ -292,6 +314,7 @@ const PAIRS: Pair[] = [
   // '맞추다 → 맞히다'는 활용형마다 바뀌는 음절이 달라 둘로 나눈다.
   {
     id: 'matchuda-vs-machida-past',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:답|정답|문제|퀴즈|번호)${JOSA}\\s*${GAP}(?:못\\s*)?맞췄`, 'g'),
     wrong: '맞췄',
     right: '맞혔',
@@ -312,6 +335,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'beda-vs-baeda',
+    autoFixSafe: true,
     pattern: new RegExp(`(?:밑간|간|양념|냄새|향|땀|물기|색)${JOSA}\\s*${GAP}베어`, 'g'),
     wrong: '베어',
     right: '배어',
@@ -322,6 +346,7 @@ const PAIRS: Pair[] = [
   },
   {
     id: 'ilche-vs-iljeol',
+    autoFixSafe: true,
     // '일절'은 부정·금지와 호응한다. 근거가 뒤에 오므로 매치를 넓게 잡는다.
     pattern: /일체\s+(?:[가-힣]+\s+){0,3}(?:않|말고|마시|마세|마라|못|없|금지|삼가|안\s)/g,
     wrong: '일체',
@@ -360,5 +385,6 @@ export const confusablePairRules: Rule[] = PAIRS.map((pair) =>
     },
     examples: pair.examples,
     ...(pair.counterExamples ? { counterExamples: pair.counterExamples } : {}),
+    ...(pair.autoFixSafe ? { autoFixSafe: true } : {}),
   }),
 )

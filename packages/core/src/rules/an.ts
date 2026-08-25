@@ -9,6 +9,7 @@ import { defineLexicon, defineRule } from './define.js'
  */
 export const anAnh = defineLexicon({
   id: 'an-anh',
+  autoFixSafe: true,
   category: 'spelling',
   confidence: 0.96,
   entries: [
@@ -66,6 +67,7 @@ export const anAnh = defineLexicon({
  */
 export const anhAlone = defineRule({
   id: 'anh-alone',
+  autoFixSafe: true,
   category: 'spelling',
   confidence: 0.95,
   pattern: /(?<![가-힣])않(?=[\s,.!?]|$)/g,
@@ -111,6 +113,7 @@ const NOUN_JI = new Set(['강아지', '망아지', '송아지', '바지', '휴�
 
 export const jiAnh = defineRule({
   id: 'ji-anh',
+  autoFixSafe: true,
   category: 'spelling',
   confidence: 0.88,
   // '-지' 뒤의 '안'이 '았/는'으로 이어지면 부정 보조용언 '않-'이어야 한다.

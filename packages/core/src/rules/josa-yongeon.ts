@@ -242,6 +242,7 @@ alternatives.sort((a, b) => b.whole.length - a.whole.length)
 
 export const josaYongeon = defineRule({
   id: 'josa-yongeon',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.94,
   pattern: new RegExp(`(?<![가-힣])(?:${alternatives.map((a) => a.source).join('|')})`, 'g'),

@@ -24,6 +24,7 @@ check('그러면 안 되요.')
 //     refs: ['한글 맞춤법 제35항 [붙임 2]'],
 //     severity: 'error',
 //     confidence: 0.97,
+//     autoFixSafe: true,
 //   },
 // ]
 
@@ -57,7 +58,13 @@ Returns non-overlapping diagnostics sorted by position. `text.slice(d.start, d.e
 
 ### `fix(text, options?): string`
 
-Applies the top suggestion for every diagnostic. Idempotent: `fix(fix(t)) === fix(t)`.
+Applies the top suggestion for **every** diagnostic. Idempotent: `fix(fix(t)) === fix(t)`.
+
+If you are applying corrections *while someone types*, do not use this. Filter on `d.autoFixSafe`
+first and apply those with `applyFixes`. That flag marks the rules that have earned the right to
+change text without being looked at — see the table in [CONTRIBUTING](../../CONTRIBUTING.md#4-묻지-않고-고쳐도-되는-규칙인가).
+`fix()` deliberately ignores it: a caller who asks for a corrected string wants the whole correction,
+not the subset that is safe to apply behind their back.
 
 ### `applyFixes(text, diagnostics, pick?): string`
 

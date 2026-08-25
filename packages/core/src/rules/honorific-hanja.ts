@@ -9,6 +9,7 @@ import type { Rule } from '../types.js'
 
 export const honorificGyesidaConj = defineRule({
   id: "honorific-gyesida-conj",
+  autoFixSafe: true,
   category: "ending",
   confidence: 0.92,
   pattern: /(?<![가-힣])(말씀|의견|이견|생각|질문|문의|사항|당부|지시|조언|제안|요청|부탁|걱정|공지|안내|인사말|축사|훈화|불편|용무|볼일|건의|이의|의문|점)(?:이|가)\s+계(?=[시셔셨세신실심십])/g,
@@ -53,6 +54,7 @@ export const honorificGyesidaConj = defineRule({
 
 export const honorificObjectDoe = defineRule({
   id: "honorific-object-doe",
+  autoFixSafe: true,
   category: "ending",
   confidence: 0.92,
   pattern: /(?<![가-힣])(발송|배송|출고|배달|반품|교환|결제|청구|정산|충전|적립|출력|인쇄|저장|삭제|마감|매진|품절|입고|송금)(되십니다|되십니까|되셨습니다|되시겠습니다|되세요|되셨어요)/g,
@@ -101,6 +103,7 @@ export const honorificObjectDoe = defineRule({
 
 export const kkeseoAgreementPast = defineRule({
   id: "kkeseo-agreement-past",
+  autoFixSafe: true,
   category: "ending",
   confidence: 0.86,
   pattern: /께서(?:는|도)?\s+((?:[가-힣]+\s+){0,2}?)([가-힣]*?)(물어봤|여쭤봤|말했|먹었|보냈|물었|웃었|앉았|읽었|들었|봤|했|갔|왔|줬|샀|탔|썼|냈)(는데|는지|길래|더니|지만)/g,
@@ -156,6 +159,7 @@ export const kkeseoAgreementPast = defineRule({
 
 export const hanjaGyeolje = defineRule({
   id: "hanja-gyeolje",
+  autoFixSafe: true,
   category: "confusable",
   // 같은 자리를 lexicon의 경고 항목도 잡는다. 겹치면 확신도가 높은 쪽이 남으므로
   // 문맥을 바로 옆에서 확인하는 이쪽을 한 칸 올려 둔다.
@@ -204,6 +208,7 @@ export const hanjaGyeolje = defineRule({
 
 export const hanjaGyeoljae = defineRule({
   id: "hanja-gyeoljae",
+  autoFixSafe: true,
   category: "confusable",
   confidence: 0.9,
   pattern: /(?<![가-힣])(?:(?:계약서|서류|문서|품의서|품의|기안서|기안|보고서|공문|전표|지출\s*결의서|결의서)(?:을|를|은|는|의)?\s*결제|(?:부서|팀|본부|과|처|실)의\s*결제(?=(?:를|가)\s*(?:[가-힣]{1,4}\s+)?(?:거[치쳐]|받|올|얻|기다))|(?:부장|과장|차장|팀장|사장|본부장|대표|임원|원장|이사|국장|실장)(?:님)?의\s*결제(?=(?:를|가)\s*(?:[가-힣]{1,4}\s+)?(?:거[치쳐]|받|올|얻|기다|필요|나[지야]|떨어))|결제(?=(?:를|가)?\s*(?:상신|반려|올려|올린|올렸|올릴|맡기)))/g,
@@ -246,6 +251,7 @@ export const hanjaGyeoljae = defineRule({
 
 export const hanjaYurae = defineRule({
   id: "hanja-yurae",
+  autoFixSafe: true,
   category: "confusable",
   confidence: 0.9,
   pattern: /(?<![가-힣])(?:(?:축제|명절|풍습|풍속|관습|의식|행사|놀이|속담|지명|명칭|이름|낱말|단어|표현|어원|전설|설화|민요|음식|요리|절기|제도|성씨|마을|유행|의례|가문|상호)의\s*유례|유례(?=가\s*깊))/g,
@@ -284,6 +290,7 @@ export const hanjaYurae = defineRule({
 
 export const hanjaJegoE = defineRule({
   id: "hanja-jego-e",
+  autoFixSafe: true,
   category: "confusable",
   confidence: 0.9,
   pattern: /(?<![가-힣])(생산성|효율성|효율|이미지|위상|경쟁력|신뢰도|만족도|인식|가치|품질|성과|수준|역량|청렴도|투명성|사기)\s*재고(?=에\s*(?:힘|나서|주력|매진|중점|앞장|기여|이바지)|[가를을]\s*(?:필요|시급|절실|관건|급선무))/g,
@@ -319,6 +326,7 @@ export const hanjaJegoE = defineRule({
 
 export const roseoMeans = defineRule({
   id: "roseo-means",
+  autoFixSafe: true,
   category: "confusable",
   confidence: 0.92,
   pattern: /(?<![가-힣])([가-힣]{2,})(함|됨|씀)으로서(?=[\s,.])/g,

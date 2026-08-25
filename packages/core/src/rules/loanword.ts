@@ -160,6 +160,7 @@ const source = [...WORDS]
 
 export const loanword = defineRule({
   id: 'loanword',
+  autoFixSafe: true,
   category: 'spelling',
   confidence: 0.95,
   // 앞에 한글이 붙어 있으면 다른 낱말의 일부다. ('일부 페이지'의 '부 페'는 애초에 공백으로 갈린다)

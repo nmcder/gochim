@@ -17,6 +17,7 @@ const TIME_L = new Set(['말', '일', '달', '초'])
 
 export const eomiGe = defineRule({
   id: 'eomi-ge',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.94,
   // 어미 '-ㄹ게'를 된소리로 적은 형태. 소리는 [께]지만 표기는 '게'다.
@@ -44,6 +45,7 @@ export const eomiGe = defineRule({
 
 export const eomiGeol = defineRule({
   id: 'eomi-geol',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.9,
   pattern: /([가-힣])껄(?=[요.,!?~…\s]|$)/g,
@@ -82,6 +84,7 @@ const YEYO_HEADS = [
 
 export const seosulYeyo = defineRule({
   id: 'seosul-yeyo',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.9,
   pattern: new RegExp(`(?<![가-힣])(${YEYO_HEADS.join('|')})에요(?=[.!?~…\\s]|$)`, 'g'),
@@ -127,6 +130,7 @@ export const seosulIeyo = defineRule({
  */
 export const eomiLreunji = defineRule({
   id: 'eomi-lreunji',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.92,
   pattern: /([가-힣])런지/g,
@@ -160,6 +164,7 @@ export const eomiLreunji = defineRule({
  */
 export const eomiGuyo = defineRule({
   id: 'eomi-guyo',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.9,
   pattern: /([가-힣])구요(?![가-힣])/g,
@@ -192,6 +197,7 @@ const MUREUP_JOSA = /^(?:이|을|은|에|도|과|만|까지|부터|으로|처럼
 
 export const pyogiMureup = defineRule({
   id: 'pyogi-mureup',
+  autoFixSafe: true,
   category: 'spelling',
   confidence: 0.93,
   pattern: /(?<![가-힣])무릅(?=[가-힣])/g,

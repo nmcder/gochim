@@ -15,6 +15,7 @@ const UNITS = '시간|분|초|일|주|주일|개월|년|달|명|개|권|장|가�
 
 export const jeOrdinal = defineRule({
   id: 'je-ordinal',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.93,
   // 접두사 '제-'는 뒤에 붙여 쓴다(제43항 붙임). 관형사 '제(=저의)'와 달리 홀로 서지 않는다.
@@ -128,6 +129,7 @@ export const dahada = defineRule({
 
 export const doublePassive = defineRule({
   id: 'double-passive',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.93,
   // '-되다'가 이미 피동인데 '-어지다'를 겹쳐 붙인 자리.
@@ -253,6 +255,7 @@ export const waeIrae = defineRule({
 
 export const myeotBeon = defineRule({
   id: 'myeot-beon',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.94,
   // 관형사 '몇'과 단위 명사는 띄어 쓴다.

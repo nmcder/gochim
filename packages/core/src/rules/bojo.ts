@@ -143,6 +143,7 @@ export const bojoGeDoeda = defineRule({
 
 export const bojoEoyaDoeda = defineRule({
   id: 'bojo-eoya-doeda',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.92,
   pattern: /([가-힣])야(되|된|될|됐|됨|됩|돼)([가-힣]?)/g,
@@ -181,6 +182,7 @@ export const bojoEoyaDoeda = defineRule({
 
 export const bojoEoyaHada = defineRule({
   id: 'bojo-eoya-hada',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.92,
   pattern: /([가-힣])야(하|한|할|했|함|합|해)([가-힣]?)/g,

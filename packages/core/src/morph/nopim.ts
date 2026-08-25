@@ -110,6 +110,7 @@ function honorPast(word: Word, trimmed: string): string | null {
 
 export const morphKkeseoAgreement: MorphRule = {
   id: 'morph-kkeseo-agreement',
+  autoFixSafe: true,
   // 높임 갈래를 따로 두지 않았다. 1층의 높임 규칙들도 'ending'에 들어 있다.
   category: 'ending',
   severity: 'error',

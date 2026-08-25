@@ -21,6 +21,7 @@ import type { Rule } from '../types.js'
 
 export const deunjiChoice = defineRule({
   id: 'deunji-choice',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.92,
   // 어미 자리의 `-던지`만 본다. 뒤에 음절이 이어지면 '창던지기·던지다'다.
@@ -95,6 +96,7 @@ const GUARDED_AFTER = /^(?:은(?![가-힣])|을(?![가-힣])|아(?![가-힣])|�
 
 export const jiAnEomi = defineRule({
   id: 'ji-an-eomi',
+  autoFixSafe: true,
   category: 'spelling',
   confidence: 0.93,
   pattern:
@@ -144,6 +146,7 @@ export const jiAnEomi = defineRule({
 
 export const daeQuotativeVerb = defineRule({
   id: 'dae-quotative-verb',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.88,
   // 동사에는 '-ㄴ데'가 붙지 못한다 — '되는데·오는데'가 맞다.
@@ -186,6 +189,7 @@ const NAT_FORMS: Record<string, string> = {
 
 export const natdaIllness = defineRule({
   id: 'natda-illness',
+  autoFixSafe: true,
   category: 'confusable',
   confidence: 0.94,
   // 병증 명사가 앞에 붙어 있을 때만 본다. 그래야 출산의 '낳다'를 건드리지 않는다.
@@ -232,6 +236,7 @@ const DAREU_FORMS: Record<string, string> = {
 
 export const teulliCompare = defineRule({
   id: 'teulli-compare',
+  autoFixSafe: true,
   category: 'confusable',
   confidence: 0.92,
   // 비교 대상이 '~와/과/랑'으로 앞에 붙어 있는 자리만 본다.
@@ -273,6 +278,7 @@ export const teulliCompare = defineRule({
 
 export const seosulDetached = defineRule({
   id: 'seosul-detached',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.93,
   // '였-·이었-·입니다'로 시작하는 낱말은 국어에 없다. 앞에 공백이 있으면 갈라 쓴 것이다.

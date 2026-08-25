@@ -23,6 +23,7 @@ import type { Rule } from '../types.js'
 
 export const busaWae = defineRule({
   id: 'busa-wae',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.93,
   // '왜' 뒤를 통째로 띄우면 '왜냐하면·왜인지'가 깨진다. 한 단어가 될 수 없는 '그러다' 계열만 잡는다.
@@ -136,6 +137,7 @@ const DICT_FORM: Record<string, string> = {
 
 export const mokjeogeoSpacing = defineRule({
   id: 'mokjeogeo-spacing',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.93,
   pattern:
@@ -207,6 +209,7 @@ const MWO_ADJECTIVE_BEFORE = /(?:좀|조금|영|참|다소|약간|[가-힣]+기(
 
 export const mwoHada = defineRule({
   id: 'mwo-hada',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: /(?<![가-힣])뭐하(냐|니|는|세|실|십|자)|(?<![가-힣])뭐할(?=[까래])/g,

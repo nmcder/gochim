@@ -75,6 +75,7 @@ export const josaSpaced = defineRule({
  */
 export const josaBakke = defineRule({
   id: 'josa-bakke',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: /([가-힣]) 밖에(?=\s*(?:없|모르|못|안 ))/g,
@@ -101,6 +102,7 @@ export const josaBakke = defineRule({
 /** `-ㄹ지`는 어미다. `할 지` → `할지` */
 export const eomiLji = defineRule({
   id: 'eomi-lji',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: /([가-힣]) 지([도요])?(?=[\s.,?!]|$)/g,
@@ -122,6 +124,7 @@ export const eomiLji = defineRule({
 /** `-ㄹ뿐더러`, `-ㄹ수록`도 어미다. */
 export const eomiAttached = defineRule({
   id: 'eomi-attached',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.93,
   pattern: /([가-힣]) (뿐더러|수록)/g,
@@ -161,6 +164,7 @@ const QUOTE_END = /[가-힣0-9\p{Ll}\p{Lu}"'”’」』\]）)]/u
 
 export const josaRago = defineRule({
   id: 'josa-rago',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.92,
   pattern: /(?<=\S)[ \t]+(이라고|라고|이라는|라는)(?![가-힣])/g,

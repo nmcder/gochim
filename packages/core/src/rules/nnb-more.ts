@@ -126,6 +126,7 @@ const DE_PREDICATE = [
 
 export const nnbDePredicate = defineRule({
   id: 'nnb-de-predicate',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: /((?<![가-힣])[가-힣]*([가-힣]))데(?=\s)/g,
@@ -558,6 +559,7 @@ export const nnbGeotIda = defineRule({
 
 export const josaBodaGeot = defineRule({
   id: 'josa-boda-geot',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   // josa-boda는 앞말이 두 음절 이상일 때만 본다. 한 음절 의존명사 뒤를 메운다.
@@ -584,6 +586,7 @@ export const josaBodaGeot = defineRule({
 
 export const josaIdaNnb = defineRule({
   id: 'josa-ida-nnb',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.93,
   pattern: /(뿐|따름|나름|터)\s+(이었|이다|이라|이며|이니|입니|이지|이야(?!기))/g,
@@ -607,6 +610,7 @@ export const josaIdaNnb = defineRule({
 /** 관형사 뒤의 의존명사. 문자열만 보고 갈아 끼워도 되는 자리다. */
 export const nnbDeterminer = defineLexicon({
   id: 'nnb-determiner',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.94,
   entries: [
@@ -691,6 +695,7 @@ const DE_PLACE_VERB = /^\s+(?:가는|가자|가서|가고|가면|가려|갈|갔|
 
 export const nnbDeDareun = defineRule({
   id: 'nnb-de-dareun',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: /(?<![가-힣])다른데(?=\s)/g,
@@ -730,6 +735,7 @@ const OUR_NOUN =
 
 export const daemyeongsaNoun = defineRule({
   id: 'daemyeongsa-noun',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.92,
   // 뒤에 조사가 붙어도 잡아야 한다 — `저희가게를`. 다만 한글이 더 이어지면
@@ -764,6 +770,7 @@ export const daemyeongsaNoun = defineRule({
  */
 export const deuridaSuffix = defineRule({
   id: 'deurida-suffix',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.92,
   pattern: /(?<![가-힣])(사과|감사|말씀|연락|부탁|축하)\s+(드리|드립|드릴|드렸|드림|드려)/g,
@@ -792,6 +799,7 @@ export const deuridaSuffix = defineRule({
  */
 export const hanpyeonDiscourse = defineRule({
   id: 'hanpyeon-discourse',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: /(?<![가-힣])한 편(?=,)/g,

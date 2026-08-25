@@ -20,6 +20,7 @@ const notAfterNumeral = (ctx: RuleContext) => !NUMERAL_BEFORE.test(ctx.text.slic
  */
 export const doeDwae = defineLexicon({
   id: 'doe-dwae',
+  autoFixSafe: true,
   category: 'spelling',
   confidence: 0.97,
   entries: [
@@ -111,6 +112,7 @@ export const dwaeJiAnh = defineRule({
  */
 export const doeSentenceFinal = defineRule({
   id: 'doe-final',
+  autoFixSafe: true,
   category: 'spelling',
   confidence: 0.93,
   // 어절 전체가 '되'이고 물음표·느낌표로 끝나는 자리만 본다.

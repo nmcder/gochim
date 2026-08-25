@@ -62,6 +62,7 @@ const NADA_NEXT: Record<string, Set<string>> = {
 
 export const bojoGoNada = defineRule({
   id: 'bojo-go-nada',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.93,
   pattern: /(?<=[가-힣])고(나서|나니|나면|나자|났)/g,

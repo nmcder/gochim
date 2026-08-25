@@ -44,6 +44,7 @@ const WORD_GEON = new Set(['안건', '사건', '여건', '조건', '요건', '�
 
 export const nnbGeotBare = defineRule({
   id: 'nnb-geot-bare',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.93,
   // 조사가 붙지 않은 '것'. `~하는 것 같다`가 실제 글에서 가장 흔한 형태다.
@@ -163,6 +164,7 @@ function afterJiEnding(text: string, index: number): boolean {
 
 export const anhVsAn = defineRule({
   id: 'anh-vs-an',
+  autoFixSafe: true,
   category: 'confusable',
   confidence: 0.94,
   pattern: /않([가-힣])/g,
@@ -303,6 +305,7 @@ const AFTER_DET = '식|말|일|것들|생각|사람|때문'
 
 export const gwanhyeongsaNoun = defineRule({
   id: 'gwanhyeongsa-noun',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.92,
   pattern: new RegExp(`(?<![가-힣])(${DETERMINERS})(${AFTER_DET})(?![가-힣])|(?<![가-힣])(${DETERMINERS})(${AFTER_DET})(?=[이가은는을를도만에으로])`, 'g'),
@@ -350,6 +353,7 @@ const COUNTER_COMPOUND = [
 
 export const numeralCounter = defineRule({
   id: 'numeral-counter',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.92,
   pattern: new RegExp(`(?<![가-힣])(${NUMERALS})(${COUNTERS})(?![가-힣])|(?<![가-힣])(${NUMERALS})(${COUNTERS})(?=[이가은는을를도만에])`, 'g'),
@@ -389,6 +393,7 @@ export const numeralCounter = defineRule({
 /** `동안` 앞에 올 수 있는 시간 표현. `그동안·한동안·오랫동안`은 한 단어라 뺀다. */
 export const donganNoun = defineRule({
   id: 'dongan-noun',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.92,
   pattern: /(?<![가-힣])(한참|잠깐|잠시|얼마|평생|사흘|이틀|보름|한참)동안/g,
@@ -408,6 +413,7 @@ export const donganNoun = defineRule({
 /** `-어야겠다`는 한 덩어리다. 사이를 띄우면 안 된다. */
 export const yagetda = defineRule({
   id: 'yagetda',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.93,
   pattern: /([가-힣])야\s+(겠[가-힣]*)/g,
@@ -422,11 +428,25 @@ export const yagetda = defineRule({
     }
   },
   examples: [{ wrong: '더 귀 기울여 들어야 겠다고 생각했다.', right: '더 귀 기울여 들어야겠다고 생각했다.' }],
+  // 이미 붙여 쓴 자리는 건드릴 것이 없다.
+  //
+  // 이 규칙의 안전은 **`겠-`으로 시작하는 낱말이 국어에 없다**는 사실에 기댄다.
+  // 그래서 아는 한계가 하나 있다 — 어미를 낱말처럼 인용하면 걸린다
+  // (`민수야 겠다는 말이 무슨 뜻이야?`). 반례로 적어 두려 했으나 아무도 쓰지 않는
+  // 문장이라 뺐다. 정말 걸린다면 그때 좁힐 것이지, 지금 없는 위험을 막느라
+  // 규칙을 복잡하게 만들지 않는다.
+  counterExamples: [
+    '더 귀 기울여 들어야겠다고 생각했다.',
+    '이제 자야겠어요.',
+    '내일은 일찍 나가야겠다.',
+    '집에 가야 할 것 같다.',
+  ],
 })
 
 /** 비교의 `보다`는 부사격 조사라 앞말에 붙여 쓴다. */
 export const josaBoda = defineRule({
   id: 'josa-boda',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: /([가-힣]{2,})\s+보다(?=\s|[,.]|$)/g,
@@ -502,6 +522,7 @@ const ADVERB_PAIRS = [
 
 export const adverbPair = defineRule({
   id: 'adverb-pair',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: new RegExp(`(?<![가-힣])(${ADVERB_PAIRS.map((e) => e.wrong).join('|')})(?=[가-힣])`, 'g'),
@@ -528,6 +549,7 @@ const MAL_HEADS = '할|한|하는|자기|무슨|그런|이런|저런|어떤|남�
 
 export const malSpacing = defineRule({
   id: 'mal-spacing',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: new RegExp(`(?<![가-힣])(${MAL_HEADS})말(?=[을이은는도만과에]|\\s|[.,!?]|$)`, 'g'),
@@ -581,6 +603,7 @@ const AFTER_POSITION = new Set([
 
 export const unitPositionNoun = defineRule({
   id: 'unit-position-noun',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.94,
   pattern: new RegExp(`(?<![가-힣0-9])(${UNIT_NUMERALS})( ?)(${TIME_UNITS})(${POSITION_NOUNS})`, 'g'),

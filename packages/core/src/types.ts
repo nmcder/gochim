@@ -41,6 +41,18 @@ export interface Diagnostic {
   refs?: string[]
   /** 0~1. 1층 규칙은 문맥을 모르므로 확신도를 함께 싣는다. */
   confidence: number
+  /**
+   * **묻지 않고 고쳐도 되는가.**
+   *
+   * `severity`와 다른 축이다. `severity`는 "이것이 틀렸는가"라는 국어적 판정이고,
+   * 이 값은 "사람이 보지 않아도 이 규칙을 믿을 수 있는가"라는 공학적 판정이다.
+   * 둘을 겹쳐 쓴 것이 예전에 사용자 글을 망가뜨린 원인이었다 — 국어적으로 분명히
+   * 틀린 자리를 잡는 규칙이라도, 그 규칙의 **가드**가 뚫리면 맞는 글을 고쳐 버린다.
+   *
+   * 규칙이 이 자격을 얻는 조건은 `CONTRIBUTING.md`에 적혀 있고 `npm run guard`가 지킨다.
+   * 자격이 없는 규칙도 **밑줄과 카드로는 그대로 보인다.** 잃는 것은 자동 적용뿐이다.
+   */
+  autoFixSafe: boolean
 }
 
 /** 규칙 판정 함수에 넘어가는 문맥. */
@@ -89,6 +101,13 @@ export interface Rule {
   examples: Example[]
   /** 이 규칙이 절대 건드리면 안 되는 정상 문장. 오탐 회귀 테스트로 쓴다. */
   counterExamples?: string[]
+  /**
+   * 이 규칙을 **묻지 않고 적용해도 되는가.** 적지 않으면 안 된다는 뜻이다.
+   *
+   * 기본값이 거짓인 것이 요점이다. 새 규칙은 자격을 증명하기 전까지 밑줄만 긋는다.
+   * 자격 조건은 `CONTRIBUTING.md`에 있고 `npm run guard`가 선언을 검증한다.
+   */
+  autoFixSafe?: boolean
 }
 
 /** 형태소 분석기가 돌려주는 형태소 하나. */
@@ -138,6 +157,8 @@ export interface MorphRule {
   run(ctx: MorphRuleContext): MorphFinding[]
   examples: Example[]
   counterExamples?: string[]
+  /** [Rule.autoFixSafe]와 같다. 적지 않으면 자동 적용하지 않는다. */
+  autoFixSafe?: boolean
 }
 
 export interface MorphRuleContext {

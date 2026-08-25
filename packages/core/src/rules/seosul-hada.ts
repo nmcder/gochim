@@ -62,6 +62,7 @@ const ADNOMINALS = new Set([
 
 export const seosulHada = defineRule({
   id: 'seosul-hada',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.9,
   pattern: new RegExp(`(?<![가-힣])(${HADA_NOUNS.join('|')}) (하|한|할|했|해|함|합)([가-힣]*)`, 'g'),

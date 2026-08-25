@@ -22,6 +22,7 @@ const STOCK = '재고|재료|물량|자리|좌석|표|잔고|수량'
 
 export const honorificObject = defineRule({
   id: 'honorific-object',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.93,
   pattern: new RegExp(`(${INANIMATE})(?:이|가|은|는)?\\s*(?:다\\s+|오늘\\s+|방금\\s+)?(나오셨|출발하셨|도착하셨|준비되셨)`, 'g'),
@@ -110,6 +111,7 @@ const longestFirst = (table: Record<string, string>) =>
  */
 export const honorificObjectSi = defineRule({
   id: 'honorific-object-si',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.9,
   pattern: new RegExp(
@@ -153,6 +155,7 @@ export const honorificObjectSi = defineRule({
 /** `품절이시라고` — 서술격 조사에 높임이 붙은 자리. 앞말에 조사가 끼지 않는다. */
 export const honorificObjectIsi = defineRule({
   id: 'honorific-object-isi',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.9,
   pattern: new RegExp(`(?<![가-힣])(?:${INANIMATE_SUBJECT})(${longestFirst(ISI_PLAIN)})`, 'g'),
@@ -198,6 +201,7 @@ const YEOJJU: Record<string, string> = {
 
 export const honorificYeojjuda = defineRule({
   id: 'honorific-yeojjuda',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.9,
   pattern: new RegExp(
@@ -236,6 +240,7 @@ const DEURIDA: Record<string, string> = {
 
 export const honorificDeurida = defineRule({
   id: 'honorific-deurida',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.88,
   pattern: new RegExp(
@@ -268,6 +273,7 @@ export const honorificDeurida = defineRule({
 
 export const honorificSaengsin = defineRule({
   id: 'honorific-saengsin',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.9,
   pattern: new RegExp(`(?<![가-힣])(?:${HONORED_PERSON})\\s+생일`, 'g'),
@@ -376,6 +382,7 @@ export const honorificGyesida = defineRule({
 
 export const honorificJeohuiNara = defineRule({
   id: 'honorific-jeohui-nara',
+  autoFixSafe: true,
   category: 'ending',
   confidence: 0.95,
   // 나라는 낮출 대상이 아니다. 회사·학교를 낮추는 '저희'는 정상이다.

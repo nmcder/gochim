@@ -78,6 +78,7 @@ const SUSA = /(?:\d+|[일이삼사오육칠팔구십백천만억조]+|수[십백
 /** 두음법칙 — 어두의 '년'은 '연'으로 적는다. 수 뒤에 오는 의존명사 '년'은 그대로. */
 export const dueumYeon = defineRule({
   id: 'dueum-yeon',
+  autoFixSafe: true,
   category: 'spelling',
   confidence: 0.93,
   pattern: /(?<![가-힣\d])년(도|말|초|간|중)/g,
@@ -161,6 +162,7 @@ const ROLE_NOUNS = [
 
 export const roseoQualification = defineRule({
   id: 'roseo-qualification',
+  autoFixSafe: true,
   category: 'confusable',
   confidence: 0.92,
   pattern: new RegExp(`(${ROLE_NOUNS.join('|')})(으로써|로써)`, 'g'),

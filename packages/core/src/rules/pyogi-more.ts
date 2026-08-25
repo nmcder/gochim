@@ -14,6 +14,7 @@ import type { Rule } from '../types.js'
  */
 export const pyogiLexicon = defineLexicon({
   id: 'pyogi',
+  autoFixSafe: true,
   category: 'spelling',
   confidence: 0.95,
   entries: [

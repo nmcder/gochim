@@ -16,6 +16,13 @@ export interface RuleSpec {
   resolve: (ctx: RuleContext) => Finding | null
   examples: Example[]
   counterExamples?: string[]
+  /**
+   * 묻지 않고 적용해도 되는가. **적지 않으면 안 된다는 뜻이다.**
+   *
+   * 기본값이 거짓인 것이 이 플래그의 전부다. 새 규칙은 자격을 증명하기 전까지
+   * 밑줄만 긋는다. 자격 조건과 그것을 어떻게 확인하는지는 `CONTRIBUTING.md`에 있다.
+   */
+  autoFixSafe?: boolean
 }
 
 /** 정규식 한 개짜리 규칙. */
@@ -30,6 +37,7 @@ export function defineRule(spec: RuleSpec): Rule {
     resolve: spec.resolve,
     examples: spec.examples,
     ...(spec.counterExamples ? { counterExamples: spec.counterExamples } : {}),
+    ...(spec.autoFixSafe ? { autoFixSafe: true } : {}),
   }
 }
 
@@ -68,6 +76,16 @@ export interface LexiconSpec {
   severity?: Severity
   confidence?: number
   entries: LexEntry[]
+  /**
+   * 사전 **전체**가 건드리면 안 되는 정상 문장.
+   *
+   * 항목마다 거는 `LexEntry.counterExamples`와 함께 쓰인다. 어느 항목 하나가 아니라
+   * 사전 전체의 성격에서 오는 오탐(사전에 오른 합성어를 가르는 것 같은)은 여기 적어야
+   * 자리가 맞다.
+   */
+  counterExamples?: string[]
+  /** [RuleSpec.autoFixSafe]와 같다. 사전 전체에 한 번 건다. */
+  autoFixSafe?: boolean
 }
 
 /**
@@ -97,7 +115,7 @@ export function defineLexicon(spec: LexiconSpec): Rule {
     .join('|')
 
   const examples: Example[] = []
-  const counterExamples: string[] = []
+  const counterExamples: string[] = [...(spec.counterExamples ?? [])]
   for (const e of entries) {
     examples.push(...(e.examples ?? [{ wrong: e.wrong, right: e.right }]))
     if (e.counterExamples) counterExamples.push(...e.counterExamples)
@@ -126,5 +144,6 @@ export function defineLexicon(spec: LexiconSpec): Rule {
     },
     examples,
     ...(counterExamples.length ? { counterExamples } : {}),
+    ...(spec.autoFixSafe ? { autoFixSafe: true } : {}),
   }
 }

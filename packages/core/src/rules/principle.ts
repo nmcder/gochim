@@ -138,6 +138,7 @@ export const bojoAeoAttached = defineLexicon({
  */
 export const myeongsaSigan = defineLexicon({
   id: 'myeongsa-sigan',
+  autoFixSafe: true,
   category: 'spacing',
   severity: 'error',
   confidence: 0.88,
@@ -153,7 +154,8 @@ export const myeongsaSigan = defineLexicon({
       ['수업시간', '수업 시간'],
       ['시험시간', '시험 시간'],
       ['배송시간', '배송 시간'],
-      ['대기시간', '대기 시간'],
+      // '대기시간'이 여기 있었다. 바로 위 주석이 **넣으면 안 된다고 못 박아 둔** 낱말인데
+      // 목록에는 들어 있었다. 규칙이 제 결정을 어기고 있었던 셈이라 뺀다.
     ] as const
   ).map(([wrong, right]) => ({
     wrong,
@@ -164,6 +166,13 @@ export const myeongsaSigan = defineLexicon({
     refs: ['한글 맞춤법 제2항'],
     examples: [{ wrong: `${wrong}보다 일찍 도착했다.`, right: `${right}보다 일찍 도착했다.` }],
   })),
+  // 사전에 한 낱말로 오른 것들. 여기 걸리면 목록에 넣지 말아야 할 말이 들어온 것이다.
+  counterExamples: [
+    '점심시간에 잠깐 산책을 했다.',
+    '근무시간이 끝나자마자 나왔다.',
+    '대기시간이 생각보다 길었다.',
+    '약속 시간보다 일찍 도착했다.',
+  ],
 })
 
 /* ── 구어체 종결어미 '-구' ──────────────────────────────────── */

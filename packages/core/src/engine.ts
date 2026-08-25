@@ -54,6 +54,7 @@ interface BuildInput {
   start: number
   end: number
   finding: Finding
+  autoFixSafe: boolean
 }
 
 /** Finding을 Diagnostic으로 굳힌다. 규칙 종류와 무관하게 같은 검증을 거친다. */
@@ -66,16 +67,23 @@ function buildDiagnostic(input: BuildInput): Diagnostic | null {
   const suggestions = finding.suggestions.filter((s) => s !== slice)
   if (suggestions.length === 0) return null
 
+  const severity = finding.severity ?? input.severity
+
   return {
     ruleId: finding.subId ? `${input.ruleId}/${finding.subId}` : input.ruleId,
     category: input.category,
-    severity: finding.severity ?? input.severity,
+    severity,
     start,
     end,
     text: slice,
     suggestions,
     message: finding.message,
     confidence: finding.confidence ?? input.confidence,
+    // 두 조건을 **여기서** 합친다. 적용하는 쪽에 둘을 따로 기억시키면 언젠가 하나를 빠뜨린다.
+    // 경고는 "규정이 이쪽도 허용한다"는 안내라, 규칙이 자격을 갖췄더라도 묻지 않고 바꾸면
+    // 글쓴이가 고른 표기를 빼앗는 셈이 된다. 사전형 규칙은 항목마다 경고로 내려가기도 하므로
+    // 규칙 단위가 아니라 **이 진단 하나**의 심각도를 봐야 한다.
+    autoFixSafe: input.autoFixSafe && severity !== 'warning',
     ...(finding.explain ? { explain: finding.explain } : {}),
     ...(finding.refs ? { refs: finding.refs } : {}),
   }
@@ -154,6 +162,7 @@ export function check(
           category: rule.category,
           severity: rule.severity,
           confidence: rule.confidence,
+          autoFixSafe: rule.autoFixSafe === true,
           start,
           end,
           finding,
@@ -194,6 +203,7 @@ export function check(
               category: rule.category,
               severity: rule.severity,
               confidence: rule.confidence,
+              autoFixSafe: rule.autoFixSafe === true,
               start: finding.start,
               end: finding.end,
               finding,

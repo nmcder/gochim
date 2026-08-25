@@ -65,6 +65,7 @@ const WORD_NEUN = new Set(['우는소리', '앓는소리', '죽는소리', '노�
 
 export const jaripNeun = defineRule({
   id: 'jarip-neun',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.93,
   // 앞에 음절이 있어야 어미다. 홀로 선 `는`(는개)은 매치하지 않는다.
@@ -178,6 +179,7 @@ const ADNOMINAL = [...ADNOMINALS].sort((a, b) => b.length - a.length).join('|')
 
 export const jaripAdnominal = defineRule({
   id: 'jarip-adnominal',
+  autoFixSafe: true,
   category: 'spacing',
   confidence: 0.92,
   pattern: new RegExp(`(?<![가-힣])(${ADNOMINAL})(${NOUN})`, 'g'),

@@ -47,6 +47,7 @@ const WRONG_L_EOMI = /^(ㄹ|을)(려|랴)/
 
 export const morphLyeogo: MorphRule = {
   id: 'morph-lyeogo',
+  autoFixSafe: true,
   category: 'ending',
   severity: 'error',
   confidence: 0.92,
@@ -156,6 +157,7 @@ const VERB_STEM = new Set(['VV', 'VA', 'VX', 'XSV', 'XSA'])
 
 export const morphJiElapsed: MorphRule = {
   id: 'morph-ji-elapsed',
+  autoFixSafe: true,
   category: 'spacing',
   severity: 'error',
   confidence: 0.9,
@@ -244,6 +246,7 @@ export const morphJiElapsed: MorphRule = {
  */
 export const morphIyeot: MorphRule = {
   id: 'morph-iyeot',
+  autoFixSafe: true,
   category: 'ending',
   severity: 'error',
   confidence: 0.93,
