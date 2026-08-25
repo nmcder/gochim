@@ -54,6 +54,17 @@ import { isPlainHangulWord, reanalyze, splitPoint, trimTail } from './split.js'
 const isJosa = (pos: string) => pos.startsWith('J')
 
 /**
+ * 낱자로만 이루어진 형태소. 홀로 선 `ㄹ`·`ㄴ`은 조사가 아니라 앞 음절의 받침이다.
+ *
+ * 분석기가 마땅한 길을 못 찾으면 음절을 뜯어 받침을 조사로 읽는다 —
+ * `빨갰습니다`를 `빠/NNG + ㄹ/JKO + 개/VV`로 읽는 식이다. 빠(名) + 를 + 개다라는 뜻이 된다.
+ * 표본 전체에서 이런 자리를 열아홉 군데 세었는데 **성한 것이 하나도 없었다.**
+ * 줄어든 조사(`널`의 ㄹ)는 앞말에 딱 붙는 구어 현상이라, 붙여 쓴 어절 안에서
+ * 그것을 떼어 낼 일이 애초에 없다.
+ */
+const BARE_JAMO = /^[ㄱ-ㆎ]+$/
+
+/**
  * 용언. 동사·형용사·보조용언까지만이다.
  *
  * 서술격 조사 `이다`(VCP)와 `아니다`(VCN)는 **넣지 않는다.** 이름은 지정사지만
@@ -129,20 +140,25 @@ const UNIT_NNB = new Set(['명', '개', '권', '장', '시', '분', '원', '번'
 const NOT_REALLY_NNB = new Set(['엔', '내', '건', '란'])
 
 /**
- * 조사로도 쓰이고 의존명사로도 쓰이는 말.
+ * **관형사형 어미 뒤에만 서는 의존명사.** 체언 뒤에 나왔다면 분석이 틀린 것이다.
  *
- * 같은 글자가 자리에 따라 품사를 갈아입는다.
- *   관형사형 어미 뒤 → 의존명사라 띄어 쓴다 (`할 뿐이다`, `아는 만큼`, `본 대로`) — 제42항
- *   **체언 뒤 → 조사라 붙여 쓴다** (`표기뿐이다`, `너만큼`, `법대로`) — 제41항
+ * 두 갈래가 같은 결론에 이른다.
  *
- * 분석기는 체언 뒤에서도 이것들을 NNB로 읽어 낸다. 그대로 믿고 가르면 1층의
- * `josa-spaced`가 도로 붙이고, 두 층이 무한히 진동한다. 실제로 그랬다.
+ *   뿐·만큼·대로  자리에 따라 품사를 갈아입는다. 관형사형 어미 뒤에서는 의존명사라
+ *                 띄어 쓰지만(`할 뿐이다`·`아는 만큼`·`본 대로`, 제42항),
+ *                 **체언 뒤에서는 조사라 붙여 쓴다**(`표기뿐이다`·`너만큼`·`법대로`, 제41항).
+ *   바·줄·리      체언 뒤에는 아예 설 수 없다. 그 자리에 나온 것은 외래어 합성어의
+ *                 일부지 의존명사가 아니다 — `툴바`·`스크롤바`·`사이드바`.
+ *
+ * 분석기는 어느 쪽이든 NNB로 읽어 낸다. 그대로 믿고 가르면 `표기뿐이다`에서는
+ * 1층의 `josa-spaced`가 도로 붙여 **두 층이 무한히 진동**하고, `툴바`에서는
+ * 없던 오류가 생긴다. 둘 다 실제로 그랬다.
  *
  * `만`은 넣지 않는다. 체언 뒤에서도 시간의 경과를 뜻하는 의존명사일 수 있다 — `사흘 만에`.
  */
-const NNB_OR_JOSA = new Set(['뿐', '만큼', '대로'])
+const NNB_AFTER_ETM_ONLY = new Set(['뿐', '만큼', '대로', '바', '줄', '리'])
 
-/** 체언. 이 뒤에 오는 `뿐·만큼·대로`는 조사다. */
+/** 체언. 이 뒤에 오는 위 말들은 의존명사가 아니다. */
 const CHEEON = new Set(['NNG', 'NNP', 'NP', 'NR', 'XSN'])
 
 /**
@@ -317,14 +333,28 @@ const EOMI_LOOKALIKE = new Set([
  */
 const DE_LIKE = new Set(['는데', '은데', '던데'])
 
+/**
+ * 어미 뒤에 붙은 보조사가 **어미와 한 낱말로 오분석되는** 자리를 푸는 꼬리.
+ *
+ * `않는지도`의 `-는지 + 도`를 분석기가 `는/ETM + 지도/NNG`로 읽는다. 지도(地圖)다.
+ * 앞 글자만 떼어 어미가 되는지 보고, 남은 꼬리가 보조사면 그 읽기를 버린다.
+ * 꼬리 검사가 없으면 `사는가게`의 `가게`까지 어미로 오해해 정탐을 잃는다.
+ */
+const BOJOSA_TAIL = new Set(['도', '는', '은', '만', '까지', '조차', '마저', '요', '야'])
+
 /** 이 자리에서 어절을 갈라야 하는가. 갈래를 돌려주고, 아니면 null. */
 function cutKind(word: Word, i: number): Kind | null {
   const prev = word.morphemes[i - 1]!
   const cur = word.morphemes[i]!
 
-  if (prev.pos === 'ETM' && EOMI_LOOKALIKE.has(prev.text + cur.text)) {
-    const next = word.morphemes[i + 1]
-    if (!DE_LIKE.has(prev.text + cur.text) || !next || !isJosa(next.pos)) return null
+  if (prev.pos === 'ETM') {
+    const joined = prev.text + cur.text
+    if (EOMI_LOOKALIKE.has(joined)) {
+      const next = word.morphemes[i + 1]
+      if (!DE_LIKE.has(joined) || !next || !isJosa(next.pos)) return null
+    }
+    // 어미와 보조사가 한 낱말로 뭉쳐 나온 자리 — `않는지도`의 `지도`.
+    if (EOMI_LOOKALIKE.has(prev.text + cur.text.slice(0, 1)) && BOJOSA_TAIL.has(cur.text.slice(1))) return null
   }
 
   if (cur.pos === 'NNB') {
@@ -333,13 +363,13 @@ function cutKind(word: Word, i: number): Kind | null {
     // 단위명사인데 앞에 수가 없으면 단위로 쓰인 것이 아니다. ('여명'을 '여 명'으로 쪼개는 오분석 방지)
     if (UNIT_NNB.has(cur.text) && !['SN', 'NR', 'MM'].includes(prev.pos)) return null
     if (NOT_REALLY_NNB.has(cur.text)) return null
-    if (NNB_OR_JOSA.has(cur.text) && CHEEON.has(prev.pos)) return null
+    if (NNB_AFTER_ETM_ONLY.has(cur.text) && CHEEON.has(prev.pos)) return null
     // `그분·이분·저분·윗분·여러분`은 관형사와 붙어 한 낱말이 된 말이다.
     if (cur.text === '분' && prev.pos === 'MM') return null
     return 'nnb'
   }
 
-  if (isJosa(prev.pos) && VERBAL.has(cur.pos)) return 'josa'
+  if (isJosa(prev.pos) && VERBAL.has(cur.pos)) return BARE_JAMO.test(prev.text) ? null : 'josa'
   if (prev.pos === 'ETM' && FREE_NOUN.has(cur.pos)) return 'etm'
 
   if (FREE_NOUN.has(prev.pos) && VERBAL.has(cur.pos)) {

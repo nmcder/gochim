@@ -279,10 +279,19 @@ const scrub = (line) =>
     .replace(/\s+/g, ' ')
 const longEnough = (line) => line.replace(/[^가-힣]/g, '').length >= 10
 
+/**
+ * 줄바꿈을 한 가지로 맞춘다.
+ *
+ * 이것이 없어서 **관문이 기계마다 다른 것을 쟀다.** 윈도 작업본은 CRLF, CI는 LF라
+ * 같은 저장소에서 산문이 822줄과 919줄로 갈렸고, 로컬에서 초록인 것을 밀어 넣었더니
+ * CI가 빨개졌다. 관문이 어디서 도느냐에 따라 다른 답을 내면 관문이 아니다.
+ */
+const eachLine = (text) => text.replace(/\r\n?/g, '\n').split('\n')
+
 function proseLines(markdown) {
   const out = []
   let inFence = false
-  for (const raw of markdown.split('\n')) {
+  for (const raw of eachLine(markdown)) {
     if (/^\s*```/.test(raw)) {
       inFence = !inFence
       continue
@@ -299,7 +308,7 @@ function proseLines(markdown) {
 
 function commentLines(source) {
   const out = []
-  for (const raw of source.split('\n')) {
+  for (const raw of eachLine(source)) {
     const m = raw.match(/^\s*(?:\/\/|\*|\/\*\*?)\s?(.*)$/)
     if (!m || skipLine(m[1] ?? '')) continue
     const line = scrub(m[1] ?? '').trim()
