@@ -280,6 +280,11 @@ export const seosulDetached = defineRule({
   resolve(ctx) {
     const prev = ctx.match[1] ?? ''
     const ending = ctx.match[2] ?? ''
+    // '이었-'으로 시작하는 낱말이 하나 있다 — ㅅ불규칙 용언 '잇다'의 활용형(잇+었+다).
+    // 서술격 조사 '이다'는 체언에 붙으므로 **목적격 조사 뒤에는 절대 오지 못한다.**
+    // 그 자리의 '이었다'는 언제나 '잇다'다. 이것은 목록이 아니라 통사 조건이라 뚫리지 않는다.
+    // ('뒤를 이었다·가업을 이었다·말을 이었다')
+    if (ending === '이었' && (prev === '을' || prev === '를')) return null
     return {
       suggestions: [`${prev}${ending}`],
       subId: ending,
@@ -300,6 +305,10 @@ export const seosulDetached = defineRule({
     '봉사 시간은 졸업까지 총 120시간 정도였습니다.',
     '표본의 과반수 이상이 20대였고, 그중 절반은 인근 주민이었다.',
     '옷을 두껍게 입습니다.',
+    '동생이 형의 뒤를 이었다.',
+    '삼대째 가업을 이었다.',
+    '그는 한참 뒤에야 말을 이었다.',
+    '끊어진 줄을 이었다.',
   ],
 })
 

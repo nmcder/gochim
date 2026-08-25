@@ -26,10 +26,13 @@ jobs:
       - run: npm ci
 
       # 릴리스에 깨진 물건을 올리지 않도록 전부 통과시킨 뒤에 만든다.
+      # guard까지 넣는 이유: `npm test`는 골든셋 안에서만 보고, 밖에서 온 한국어에
+      # 처음 보는 오탐이 생겼는지는 guard만 안다. 그건 받는 사람 글이 망가진다는 뜻이다.
       - name: 검증
         run: |
           npm run typecheck
           npm test
+          npm run guard
 
       - name: 확장 zip 만들기
         run: npm run pack:extension

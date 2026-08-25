@@ -14,8 +14,8 @@
  * 하나라도 어기면 종료 코드 1로 끝난다.
  */
 
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { allRules, applyFixes, check } from '../packages/core/dist/index.js'
 
@@ -25,6 +25,7 @@ const read = (p) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf8'))
 const golden = read('data/golden/golden.json')
 const prose = read('data/golden/prose.json')
 const corpus = read('data/golden/corpus.json')
+const wild = read('data/golden/wild.json')
 
 let analyzer = null
 const morphDist = resolve(ROOT, 'packages/morph/dist/index.js')
@@ -160,7 +161,203 @@ if (analyzer) {
     corpusM.ratio >= FLOOR_CORPUS_MORPH,
     `${corpusM.hit}/${corpusM.total}`,
   )
+
+  /* ── 이모지가 섞여도 같은 성적이 나오는가 ────────────────────
+   *
+   * garu-ko는 자리를 **코드포인트**로 주는데 자바스크립트 문자열은 **UTF-16**이다.
+   * 이모지 하나가 서러게이트 쌍으로 두 자리를 차지하므로, 옮겨 주지 않으면
+   * 그 뒤의 모든 자리가 1씩 밀린다. 밀린 자리로 어절을 자르면 아무 규칙도
+   * 맞아떨어지지 않아 **형태소 층이 통째로 죽는다.** 실측 0.955 → 0.790이었다.
+   *
+   * 무서운 것은 이것이 **틀린 자리에 밑줄을 긋는 게 아니라 아무 데도 안 긋는**
+   * 고장이라는 점이다. 조용해서 아무도 눈치채지 못했다. 카톡·SNS가 주 사용처인데
+   * 거기서 3층이 안 돌고 있었다.
+   *
+   * 그래서 개수가 아니라 **같은가**를 잰다. 앞에 이모지를 붙였을 때의 재현율이
+   * 붙이지 않았을 때와 다르면 자리 셈법이 또 어긋난 것이다.
+   */
+  const 이모지 = '🙂🎉👍 '
+  const shifted = corpus.texts.map((t) => ({ ...t, source: 이모지 + t.source }))
+  const emojiR = recall(shifted, KEY, true)
+  must(
+    `이모지가 섞여도 재현율이 같다 (형태소 층) — ${emojiR.ratio.toFixed(3)}`,
+    emojiR.hit === corpusM.hit && emojiR.total === corpusM.total,
+    `이모지 없이 ${corpusM.hit}/${corpusM.total} · 이모지 ${emojiR.hit}/${emojiR.total}`,
+  )
 }
+
+/* ── 5. 밖에서 온 정상 한국어 ────────────────────────────────
+ *
+ * 위 1번의 '정상 문장 829개'는 전부 골든셋 자신이다 — 규칙을 그 문장들에 맞춰
+ * 다듬었으니 오탐이 0으로 나올 수밖에 없다. **자가 거짓말을 한다.**
+ *
+ * 2026-08-25 실측: 규칙을 보지 않고 지은 평범한 문장 25개를 넣어 보니 9개가 망가졌다.
+ * 골든셋 정밀도는 1.000인데 실제로는 0.64였다.
+ *
+ * 그래서 밖에서 온 한국어를 따로 잰다. 두 뭉치다.
+ *   (가) data/golden/wild.json — 규칙과 무관하게 지은 정상 문장. 여기 지적은 전부 오탐이다
+ *   (나) 저장소 자기 산문 — 문서와 소스 주석. 테스트 자료로 쓰려고 쓴 글이 아니라 독립적이다
+ *
+ * 지금은 0으로 만들 수 없다. 그래서 **이미 알고 있는 오탐만 눈감아 주고, 처음 보는
+ * 갈래가 하나라도 나오면 실패**시킨다. 개수 상한이 아니라 **집합**인 이유는,
+ * 산문은 계속 늘어나기 때문이다 — 개수로 재면 문서를 한 줄 쓸 때마다 선이 흔들린다.
+ *
+ * 알려진 오탐 목록은 **줄어들기만 해야 한다.** 여기에 한 줄을 더하는 것은
+ * "이 오탐을 앞으로도 두겠다"는 뜻이라 그만한 이유가 있어야 한다.
+ */
+
+/** 진단 하나를 가리키는 열쇠. 같은 규칙이 같은 표기에 발화한 것은 같은 갈래로 본다. */
+const signature = (d) => `${d.ruleId}|${d.text}`
+
+/**
+ * 이미 알고 있는 오탐. 전부 **맞는 글을 망가뜨리는 것**이라 언젠가 없어져야 한다.
+ * 갈래마다 왜 나는지와 어떻게 고칠지가 그 파일에 적혀 있다.
+ * 테스트(packages/morph/test)도 같은 파일을 읽는다 — 두 곳에 적으면 곧 어긋난다.
+ */
+const KNOWN_FALSE_POSITIVES = new Set(read('data/golden/known-false-positives.json').entries.flatMap((e) => e.signatures))
+
+/**
+ * 서명이 들어맞는가.
+ *
+ * `*`로 끝나면 앞부분만 맞으면 된다. 규칙이 조사까지 물고 발화하는 자리가 있어서다 —
+ * `군데가·군데를·군데에`는 조사만 다른 **한 갈래**인데 서명을 따로 적으면
+ * 목록이 뜻 없이 길어지고, 새 조사가 나올 때마다 관문이 헛되이 운다.
+ */
+const isKnown = (key) => {
+  if (KNOWN_FALSE_POSITIVES.has(key)) return true
+  for (const known of KNOWN_FALSE_POSITIVES) {
+    if (known.endsWith('*') && key.startsWith(known.slice(0, -1))) return true
+  }
+  return false
+}
+
+/** 알려진 갈래가 아닌 것만 모은다. 이것이 하나라도 있으면 선을 넘은 것이다. */
+function unknownOnly(hits) {
+  return hits.filter((h) => !isKnown(h.key))
+}
+
+/* (가) 지어 둔 정상 문장 */
+
+const wildHits = { 1: [], 3: [] }
+for (const sentence of wild.sentences) {
+  for (const d of errorsOf(sentence, false)) {
+    wildHits[1].push({ key: signature(d), line: `${d.ruleId}: ${d.text} → ${d.suggestions[0]}  |  ${sentence}` })
+  }
+  if (!analyzer) continue
+  for (const d of errorsOf(sentence, true)) {
+    wildHits[3].push({ key: signature(d), line: `${d.ruleId}: ${d.text} → ${d.suggestions[0]}  |  ${sentence}` })
+  }
+}
+const wildNew = { 1: unknownOnly(wildHits[1]), 3: unknownOnly(wildHits[3]) }
+must(
+  `밖에서 온 정상 문장 ${wild.sentences.length}개에 처음 보는 오탐 0건 (1층)`,
+  wildNew[1].length === 0,
+  `처음 보는 것 ${wildNew[1].length}건 · 알려진 것 ${wildHits[1].length - wildNew[1].length}건`,
+)
+if (analyzer) {
+  must(
+    `밖에서 온 정상 문장 ${wild.sentences.length}개에 처음 보는 오탐 0건 (형태소 층 포함)`,
+    wildNew[3].length === 0,
+    `처음 보는 것 ${wildNew[3].length}건 · 알려진 것 ${wildHits[3].length - wildNew[3].length}건`,
+  )
+}
+
+/* (나) 저장소 자기 산문 */
+
+// 이 저장소는 예시를 본문에 백틱으로 적는다 — 일부러 틀리게 적은 것이라 오탐이 아니다.
+// 그래서 코드 조각과 화살표가 든 줄을 걷어내고 남은 **진짜 산문**만 검사한다.
+const ARROW = /[→⇒←↔⇢]/
+const ENUM_SLASH = /[가-힣]\/[가-힣]/
+// 코드나 괄호가 한글에 붙어 있으면(`며칠`이라는) 지웠을 때 조사가 홀로 남아 없던 오류가 생긴다.
+const GLUED = /(`[^`]*`|\)|\])[가-힣]/
+const skipLine = (raw) => ARROW.test(raw) || ENUM_SLASH.test(raw) || GLUED.test(raw)
+const scrub = (line) =>
+  line
+    .replace(/`[^`]*`/g, ' ')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\*\*|__|~~/g, '')
+    .replace(/\s+/g, ' ')
+const longEnough = (line) => line.replace(/[^가-힣]/g, '').length >= 10
+
+function proseLines(markdown) {
+  const out = []
+  let inFence = false
+  for (const raw of markdown.split('\n')) {
+    if (/^\s*```/.test(raw)) {
+      inFence = !inFence
+      continue
+    }
+    if (inFence || /^\s{4,}\S/.test(raw) || skipLine(raw)) continue
+    const line = scrub(raw)
+      .replace(/^\s*[|>#*\-\d.]+\s*/, '')
+      .replace(/\|/g, ' ')
+      .trim()
+    if (longEnough(line)) out.push(line)
+  }
+  return out
+}
+
+function commentLines(source) {
+  const out = []
+  for (const raw of source.split('\n')) {
+    const m = raw.match(/^\s*(?:\/\/|\*|\/\*\*?)\s?(.*)$/)
+    if (!m || skipLine(m[1] ?? '')) continue
+    const line = scrub(m[1] ?? '').trim()
+    if (longEnough(line)) out.push(line)
+  }
+  return out
+}
+
+function sourceFiles(dir) {
+  const out = []
+  for (const entry of readdirSync(resolve(ROOT, dir), { withFileTypes: true })) {
+    if (entry.isDirectory()) out.push(...sourceFiles(join(dir, entry.name)))
+    else if (/\.(ts|mjs)$/.test(entry.name)) out.push(join(dir, entry.name))
+  }
+  return out
+}
+
+const proseTexts = []
+const docs = ['README.md', 'CONTRIBUTING.md', 'CHANGELOG.md']
+for (const file of readdirSync(resolve(ROOT, 'docs/decisions'))) docs.push(join('docs/decisions', file))
+for (const file of docs) {
+  for (const line of proseLines(readFileSync(resolve(ROOT, file), 'utf8'))) proseTexts.push({ file, line })
+}
+for (const dir of ['packages/core/src', 'packages/morph/src', 'packages/store/src', 'apps/extension/src', 'apps/demo/src', 'scripts']) {
+  for (const file of sourceFiles(dir)) {
+    // 규칙 파일의 주석은 잡아야 할 오류를 그대로 적어 둔 자리라 뺀다.
+    if (/[\\/](rules|morph)[\\/]/.test(file)) continue
+    for (const line of commentLines(readFileSync(resolve(ROOT, file), 'utf8'))) proseTexts.push({ file, line })
+  }
+}
+
+const proseHits = []
+for (const { file, line } of proseTexts) {
+  for (const d of errorsOf(line, true)) {
+    proseHits.push({
+      key: signature(d),
+      line: `${d.ruleId}: ${d.text} → ${d.suggestions[0]}  |  ${file}  |  ${line.slice(0, 46)}`,
+    })
+  }
+}
+const proseNew = unknownOnly(proseHits)
+const proseChars = proseTexts.reduce((n, t) => n + t.line.length, 0)
+must(
+  `저장소 자기 산문 ${proseChars.toLocaleString()}자에 처음 보는 지적 0건`,
+  proseNew.length === 0,
+  `처음 보는 것 ${proseNew.length}건 · 알려진 것 ${proseHits.length - proseNew.length}건 · ${proseTexts.length}줄`,
+)
+
+/**
+ * 목록에 있는데 이제 안 나오는 갈래는 **고쳐졌다는 뜻**이다. 알려 주고 지우게 한다.
+ * 남겨 두면 목록이 낡아 다음 사람이 무엇이 살아 있는 오탐인지 알 수 없게 된다.
+ */
+const stillFiring = new Set([...wildHits[1], ...wildHits[3], ...proseHits].map((h) => h.key))
+const fixedSince = [...KNOWN_FALSE_POSITIVES].filter((known) =>
+  known.endsWith('*')
+    ? ![...stillFiring].some((k) => k.startsWith(known.slice(0, -1)))
+    : !stillFiring.has(known),
+)
 
 /* ── 결과 ────────────────────────────────────────────────────── */
 
@@ -187,6 +384,36 @@ for (const [title, list] of [
   console.log(title)
   for (const x of list.slice(0, 15)) console.log(`  ${x}`)
   if (list.length > 15) console.log(`  … 외 ${list.length - 15}건`)
+}
+
+// 처음 보는 오탐은 **왜 실패했는지**라서 먼저, 크게 찍는다.
+for (const [title, list] of [
+  ['처음 보는 오탐 — 밖에서 온 정상 문장', analyzer ? wildNew[3] : wildNew[1]],
+  ['처음 보는 지적 — 저장소 자기 산문', proseNew],
+]) {
+  if (list.length === 0) continue
+  console.log()
+  console.log(`${title} (${list.length}건)`)
+  console.log('  알고 있던 갈래가 아니다. 규칙이 새로 망가졌거나, 목록에 없던 오탐을 이제 만난 것이다.')
+  for (const x of list) console.log(`  ${x.line}`)
+}
+
+// 알려진 오탐도 **선을 안 넘었어도 매번 찍는다.** 눈에 보여야 줄어든다.
+for (const [title, list] of [
+  ['알려진 오탐 — 밖에서 온 정상 문장 (형태소 층 포함)', analyzer ? wildHits[3] : wildHits[1]],
+  ['알려진 오탐 — 저장소 자기 산문', proseHits],
+]) {
+  const known = list.filter((h) => isKnown(h.key))
+  if (known.length === 0) continue
+  console.log()
+  console.log(`${title} — ${known.length}건, 전부 고쳐야 할 것들이다`)
+  for (const x of known) console.log(`  ${x.line}`)
+}
+
+if (fixedSince.length > 0) {
+  console.log()
+  console.log(`고쳐진 오탐 ${fixedSince.length}가지 — guard.mjs의 KNOWN_FALSE_POSITIVES에서 지워도 된다`)
+  for (const k of fixedSince) console.log(`  ${k}`)
 }
 
 analyzer?.destroy()

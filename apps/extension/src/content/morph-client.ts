@@ -34,7 +34,11 @@ export interface MorphClientOptions {
 /** 확장 안이면 중계 길로, 밖이면 워커를 직접 만드는 길로 간다. */
 export function createMorphClient(options: MorphClientOptions): MorphClient | null {
   if (options.workerUrl) return createDirectClient({ ...options, workerUrl: options.workerUrl })
-  if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) return createRelayClient(options)
+  // `chrome.runtime`이 있어도 `sendMessage`가 없는 자리가 있다(권한 없는 프레임).
+  // 타입 위에서는 늘 있는 것으로 보이므로 실제 값을 본다.
+  if (typeof chrome !== 'undefined' && typeof chrome.runtime?.sendMessage === 'function') {
+    return createRelayClient(options)
+  }
   return null
 }
 
@@ -92,6 +96,10 @@ function createDirectClient(options: MorphClientOptions & { workerUrl: string })
       options.onError?.(message.message)
       return
     }
+    // 워커가 버린 요청. 중계 길에서는 매달린 `sendResponse`를 풀어 주는 신호지만
+    // 여기서는 기다리는 것이 없으니 그냥 넘긴다 — 오류가 아니다.
+    // (이 갈래가 빠져 있어 `undefined`를 결과로 넘길 뻔했고, 타입 검사가 그걸 잡았다)
+    if (message.type === 'dropped') return
     // 늦게 도착한 옛 요청의 결과는 버린다. 그 사이 글이 바뀌었다.
     if (message.id === latest) options.onResult(message.diagnostics)
   })

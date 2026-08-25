@@ -54,8 +54,28 @@ interface Session {
    * 조합이 끝날 때까지 자동 고침은 손을 대지 않는다.
    */
   composing: boolean
-  /** 마지막으로 글자가 들어온 시각. 자동 고침이 타이핑을 앞지르지 않게 하는 데 쓴다. */
+  /** 마지막으로 **사용자가** 글자를 넣은 시각. 자동 고침이 타이핑을 앞지르지 않게 하는 데 쓴다. */
   lastInput: number
+  /**
+   * 지금 우리가 글을 쓰고 있는가.
+   *
+   * `replaceRange`는 입력칸에 `input` 이벤트를 되쏜다. 그 이벤트가 사용자 타자와
+   * 구별되지 않아 `lastInput`이 갱신됐고, **자동 고침이 자기 손길을 사용자 타자로 읽어**
+   * 다음 고침을 매번 AUTOFIX_IDLE_MS만큼 미뤘다. 여러 자리를 이어 고칠 때 뒤엣것이
+   * 늦게 들어오던 원인이다. 글은 바뀌었으니 재검사는 그대로 건다.
+   */
+  writing: boolean
+  /**
+   * 자동 고침이 방금 한 일 — `고치기 전\0고친 뒤` 꼴로 적는다.
+   *
+   * 규칙 둘이 같은 자리를 반대로 판정하면 자동 고침이 자기가 쓴 것을 도로 되돌리고,
+   * 사용자 화면에서는 글자가 깜빡인다. 코어의 `fix`는 되풀이 안에서 이것을 막지만
+   * 확장은 타자 사이사이에 한 번씩 고치므로 스스로 기억해야 한다.
+   *
+   * 규칙 쪽에서 다툼을 없애는 것이 정문이고(`idempotence.test.ts`가 지킨다) 이것은
+   * 아직 못 찾은 다툼에 대비한 빗장이다.
+   */
+  recentFixes: Set<string>
   /**
    * 글 전체를 훑은 결과. 창(4,000자) 밖까지 포함한다.
    *
@@ -208,6 +228,22 @@ function justEndedWord(text: string, caret: number): boolean {
   return /[\s.,!?…;:)\]}"']/.test(text[caret - 1] ?? '')
 }
 
+/** 자동 고침이 한 일 하나. `\0`은 한국어 글에 나올 수 없어 가름표로 안전하다. */
+const fixKey = (from: string, to: string): string => `${from}\u0000${to}`
+
+/**
+ * 몇 개까지 기억하는가.
+ *
+ * 되돌림은 바로 다음 검사에서 나타나므로 길게 볼 이유가 없다. 무한정 쌓이면
+ * 오래 쓰는 입력칸에서 사용자가 **일부러** 되돌린 표기까지 막게 된다.
+ */
+const FIX_MEMORY = 16
+
+function remember(memory: Set<string>, key: string): void {
+  if (memory.size >= FIX_MEMORY) memory.delete(memory.values().next().value as string)
+  memory.add(key)
+}
+
 /**
  * 묻지 않고 알아서 고친다.
  *
@@ -231,6 +267,10 @@ function justEndedWord(text: string, caret: number): boolean {
  */
 function autoFix(final = false): boolean {
   if (!session || settings?.autoFix !== true) return false
+  // 확장을 꺼도 이 길은 남아 있었다. `runCheck`는 `enabled`를 보지만 focusout은
+  // `autoFix(true)`를 곧장 부르고, 끌 때 `session.diagnostics`를 비우지 않기 때문에
+  // **끈 뒤에 입력칸을 벗어나기만 해도** 꺼지기 전의 진단이 그대로 적용됐다.
+  if (settings.enabled !== true) return false
   if (session.composing) return false
   // 손을 댄 적 없는 칸은 건드리지 않는다. 남이 써 둔 댓글을 고치려고 눌렀을 뿐인데
   // 클릭만으로 글이 바뀌면 놀란다. 이미 써 둔 글은 Alt+Shift+F가 맡는다.
@@ -258,15 +298,24 @@ function autoFix(final = false): boolean {
   let moved = caret
   let earliest = Number.POSITIVE_INFINITY
   let fixed = 0
-  for (const d of plan) {
-    // 뒤에서 앞으로 가므로 겹치는 것은 이미 고른 뒤엣것만 남긴다.
-    if (d.end > earliest) continue
-    const replacement = d.suggestions[0] ?? ''
-    // 손을 뗀 뒤에는 초점을 건드리지 않고 쓴다. 안 그러면 옮겨 간 자리에서 초점을 도로 끌어온다.
-    session.target.replaceRange(d.start, d.end, replacement, final)
-    moved += replacement.length - (d.end - d.start)
-    earliest = d.start
-    fixed += 1
+  session.writing = true
+  try {
+    for (const d of plan) {
+      // 뒤에서 앞으로 가므로 겹치는 것은 이미 고른 뒤엣것만 남긴다.
+      if (d.end > earliest) continue
+      const replacement = d.suggestions[0] ?? ''
+      // 방금 우리가 쓴 것을 도로 물리려는 진단은 버린다. 두 규칙이 다투고 있다는 뜻이라,
+      // 여기서 막지 않으면 글자가 두 표기 사이를 오간다.
+      if (session.recentFixes.has(fixKey(replacement, d.text))) continue
+      // 손을 뗀 뒤에는 초점을 건드리지 않고 쓴다. 안 그러면 옮겨 간 자리에서 초점을 도로 끌어온다.
+      session.target.replaceRange(d.start, d.end, replacement, final)
+      remember(session.recentFixes, fixKey(d.text, replacement))
+      moved += replacement.length - (d.end - d.start)
+      earliest = d.start
+      fixed += 1
+    }
+  } finally {
+    session.writing = false
   }
   if (fixed === 0) return false
 
@@ -385,6 +434,15 @@ const popover = createPopover({
   onApply(diagnostic) {
     const replacement = diagnostic.suggestions[0]
     if (!session || replacement == null) return
+    // 카드가 떠 있는 동안에도 글은 바뀔 수 있다 — 늦게 온 형태소 결과가 다시 그리거나,
+    // 다른 창에서 붙여넣거나, 편집기가 스스로 고쳐 쓰는 자리가 있다. 그 사이 오프셋이
+    // 밀렸는데 그대로 갈아 끼우면 **엉뚱한 자리를 자른다.**
+    // [autoFix]와 [fixPlan]은 이 대조를 이미 하고 있었는데 이 길만 빠져 있었다.
+    if (session.target.getText().slice(diagnostic.start, diagnostic.end) !== diagnostic.text) {
+      popover.hide()
+      scheduleCheck(0)
+      return
+    }
     session.target.replaceRange(diagnostic.start, diagnostic.end, replacement)
     scheduleCheck(0)
   },
@@ -497,6 +555,8 @@ function attach(target: EditableTarget): void {
     dismissed: null,
     composing: false,
     lastInput: 0,
+    writing: false,
+    recentFixes: new Set(),
     whole: null,
   }
   scheduleCheck(0)
@@ -528,7 +588,9 @@ document.addEventListener('compositionend', (event) => {
 
 document.addEventListener('input', (event) => {
   if (session && event.target === session.target.element) {
-    session.lastInput = Date.now()
+    // 우리가 쓴 글이 되쏜 이벤트는 타자로 세지 않는다. 세면 자동 고침이 자기 손길에
+    // 밀려 다음 고침을 계속 미룬다. 글이 바뀐 것은 사실이니 재검사는 그대로 건다.
+    if (!session.writing) session.lastInput = Date.now()
     scheduleCheck()
     return
   }
@@ -653,6 +715,14 @@ async function boot(): Promise<void> {
   onSettingsChanged((next) => {
     settings = next
     if (!next.enabled) {
+      // 그리는 것만 멈추면 부족하다. 들고 있던 진단이 남아 있으면 자동 고침·'모두 고치기'가
+      // 꺼진 뒤에도 그것을 적용할 수 있다. 껐다는 것은 아무 일도 하지 않는다는 뜻이다.
+      if (session) {
+        session.base = []
+        session.morph = []
+        session.diagnostics = []
+        session.whole = null
+      }
       session?.layer.render([])
       popover.hide()
     } else {

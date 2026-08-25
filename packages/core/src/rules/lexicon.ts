@@ -211,14 +211,23 @@ export const lexicon = defineLexicon({
     {
       wrong: '일부로',
       right: '일부러',
-      // '장학금 일부로 교재를 샀다'의 '일부'는 一部다. 앞말이 나눌 수 있는 것이면 건드리지 않는다.
-      when: (ctx) =>
-        !/(장학금|예산|금액|수익|비용|재산|상금|지원금|매출|자금|보증금|월급|용돈|기금)\s*$/.test(
-          ctx.text.slice(Math.max(0, ctx.index - 8), ctx.index),
-        ),
+      // '일부러'는 부사다. 부사는 관형어의 꾸밈을 받지 못하고 조사를 달지도 못한다.
+      // 그래서 앞에 관형격 조사 '의'나 수가 오거나, 뒤에 '서·써'가 붙으면 그 '일부'는
+      // 부분을 뜻하는 一部다 — 통사 조건이라 앞말이 무엇이든 뚫리지 않는다.
+      // 명사 목록은 그 조건에 안 걸리는 '장학금 일부로'를 위해 남긴다.
+      when: (ctx) => {
+        const before = ctx.text.slice(Math.max(0, ctx.index - 10), ctx.index)
+        if (/(?:의|[0-9]|[일이삼사오육칠팔구십백천만])\s*$/.test(before)) return false
+        if (/^(?:서|써)/.test(ctx.text.slice(ctx.index + 3))) return false
+        return !/(장학금|예산|금액|수익|비용|재산|상금|지원금|매출|자금|보증금|월급|용돈|기금)\s*$/.test(before)
+      },
       explain: "'일부러'가 표준어입니다. 부분을 뜻하는 '일부(一部)'와는 다른 말입니다.",
       examples: [{ wrong: '미안 일부로 그런 거 아니었어.', right: '미안 일부러 그런 거 아니었어.' }],
-      counterExamples: ['장학금 일부로 교재를 샀어.'],
+      counterExamples: [
+        '장학금 일부로 교재를 샀어.',
+        '이 일의 일부로 회의도 포함된다.',
+        '전체 일부로서 맡은 몫이 있다.',
+      ],
     },
     { wrong: '떡볶기', right: '떡볶이', explain: "'볶다'의 명사형이 붙은 말이라 '떡볶이'입니다. ('-기'가 아니라 '-이')" },
     { wrong: '곱배기', right: '곱빼기', explain: "곱으로 많다는 뜻의 접미사는 '-빼기'입니다(뚝배기·코빼기와 같은 계열)." },

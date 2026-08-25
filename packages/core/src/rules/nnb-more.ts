@@ -60,8 +60,13 @@ const EXACT_DE = new Set([
   '가운데', '한데', '온데', '간데', '그런데', '근데', '뭔데', '건데',
   '오는데', '내리는데', '모르는데', '안되는데', '맞는데', '그러는데',
 ])
-/** 꼬리만 같아도 막는다. `맛있는데`·`학생인데`·`한가운데`. */
-const SUFFIX_DE = ['인데', '없는데', '있는데', '싶은데', '가운데']
+/**
+ * 꼬리만 같아도 막는다. `맛있는데`·`학생인데`·`한가운데`.
+ *
+ * `군데`는 낱낱의 곳을 세는 의존명사라 그 자체가 한 낱말이다(표준국어대사전).
+ * 꼬리로 적어야 `한군데·두군데`까지 함께 지켜진다.
+ */
+const SUFFIX_DE = ['인데', '없는데', '있는데', '싶은데', '가운데', '군데']
 
 function blockedDe(word: string): boolean {
   const whole = word + '데'
@@ -469,8 +474,20 @@ export const nnbJungIp = defineRule({
   counterExamples: ['휴대폰에 부재중 전화가 세 통 찍혔다.', '중학교 때 배운 내용이다.', '집중임을 알 수 있다.'],
 })
 
-/** ㄴ·ㄹ받침 뒤의 `거`와 붙어 한 낱말이 되는 말. */
-const WORD_GEO = new Set(['자전거', '인력거', '은거', '별거', '동거', '헌거', '삼륜거'])
+/**
+ * ㄴ·ㄹ받침 뒤의 `거`와 붙어 한 낱말이 되는 말.
+ *
+ * 여기서만은 목록이 뒷문이 되지 않는다. 앞 음절에 ㄴ·ㄹ 받침을 두고 `거`로 끝나는 말은
+ * 擧(선거·천거)·據(근거)·去(철거)·居(은거·별거)·車(자전거·인력거) 몇 형태소로 만들어진
+ * **한자어**뿐이고, 한자어는 새로 생기지 않는다. 뚫린 것은 목록을 썼기 때문이 아니라
+ * 목록을 **다 안 적었기** 때문이다.
+ *
+ * 다만 관형사형과 겹치는 것은 일부러 뺐다. 아래는 넣으면 흔한 정탐이 죽는다.
+ *   `할거`(割據) — '뭐 할거?'   `준거`(準據) — '내가 준거 어디 있어?'
+ *   `열거`(列擧) — '문 열거?'   `한거`(閑居) — '니가 말한거 맞아?'
+ * 여기서는 잃는 쪽(군웅할거·열거)이 훨씬 드문 말이라 값이 싸다.
+ */
+const WORD_GEO = ['자전거', '인력거', '삼륜거', '은거', '별거', '동거', '헌거', '선거', '천거', '근거', '철거']
 
 export const nnbGeoBare = defineRule({
   id: 'nnb-geo-bare',
@@ -481,9 +498,10 @@ export const nnbGeoBare = defineRule({
   resolve(ctx) {
     const prev = ctx.match[1] ?? ''
     if (!isNorL(prev)) return null
-    const two = ctx.text.slice(Math.max(0, ctx.index - 1), ctx.index + 2)
-    const three = ctx.text.slice(Math.max(0, ctx.index - 2), ctx.index + 2)
-    if (WORD_GEO.has(two) || WORD_GEO.has(three)) return null
+    // 어절을 통째로 보고 꼬리를 맞춘다. 앞뒤 몇 글자만 떼어 비교하면 낱말이 글 첫머리에
+    // 있을 때만 맞아떨어진다 — '별거 아니야'는 막히는데 '이건 별거 아니야'는 뚫렸다.
+    const word = /([가-힣]*)$/.exec(ctx.text.slice(0, ctx.index + 2))?.[1] ?? ''
+    if (WORD_GEO.some((w) => word.endsWith(w))) return null
     if (!/[가-힣]/.test(ctx.before)) return null
     return {
       suggestions: [`${prev} 거`],

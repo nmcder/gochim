@@ -34,6 +34,35 @@ export interface GochimAnalyzer extends Analyzer {
   info(): { version: string; size: number; accuracy: number }
 }
 
+/**
+ * 자리 셈법을 맞춘다 — garu-ko는 **코드포인트**, 자바스크립트 문자열은 **UTF-16**.
+ *
+ * 이 하나가 카톡·SNS에서 형태소 층을 통째로 죽이고 있었다. 이모지는 UTF-16에서
+ * 두 자리(서러게이트 쌍)를 차지하는데 코드포인트로는 한 자리다. 그래서 이모지 하나가
+ * 나올 때마다 뒤따르는 모든 자리가 1씩 밀린다. 밀린 자리로 어절을 자르면
+ * `학교끝나고`가 `" 학교끝나"`로 잘려 나와 어느 규칙도 맞아떨어지지 않는다.
+ * 재현율이 0.955에서 0.790으로 떨어졌고, **틀린 자리에 밑줄을 긋는 것이 아니라
+ * 아무 데도 안 긋는** 꼴이라 아무도 눈치채지 못했다.
+ *
+ * `token.start/end`뿐 아니라 `segment.offset`도 코드포인트다. 둘 다 옮겨야 한다.
+ *
+ * 코드포인트 k번째 글자가 UTF-16 몇 번째에서 시작하는지 적은 표를 돌려준다.
+ * 길이는 글자 수 + 1이라 끝점(exclusive)도 그대로 찾을 수 있다.
+ *
+ * 서러게이트가 없으면 두 셈법이 같으므로 `null`을 돌려주고 표를 만들지 않는다 —
+ * 한국어 글은 거의 언제나 이쪽이다.
+ */
+function codePointIndex(text: string): number[] | null {
+  if (!/[\uD800-\uDFFF]/.test(text)) return null
+  const map: number[] = []
+  for (let i = 0; i < text.length; ) {
+    map.push(i)
+    i += (text.codePointAt(i) ?? 0) > 0xffff ? 2 : 1
+  }
+  map.push(text.length)
+  return map
+}
+
 /** topN 옵션을 쓰면 배열이 온다. 우리는 최적해 하나만 쓴다. */
 function tokensOf(result: unknown): { text: string; pos: string; start: number; end: number }[] {
   const best = Array.isArray(result) ? result[0] : result
@@ -50,14 +79,20 @@ export async function createAnalyzer(options: CreateAnalyzerOptions = {}): Promi
       // 문장 단위로 나눠 분석한다. 긴 글을 통째로 넣으면 격자가 커져
       // 시간이 초선형으로 늘어난다 (실측: 4,000자 612ms → 문장 분할 후 4ms).
       const morphemes: Morpheme[] = []
+      // 코드포인트 자리를 UTF-16 자리로 옮기는 표. 서러게이트가 없으면 null이고,
+      // 그때는 두 셈법이 같으므로 그대로 쓴다.
+      const map = codePointIndex(text)
+      const last = map ? map.length - 1 : 0
+      const at = (cp: number): number => (map ? (map[Math.max(0, Math.min(cp, last))] ?? text.length) : cp)
+
       for (const segment of splitSentences(text)) {
         for (const token of tokensOf(garu.analyze(segment.text))) {
-          morphemes.push({
-            text: token.text,
-            pos: token.pos,
-            start: token.start + segment.offset,
-            end: token.end + segment.offset,
-          })
+          const start = at(token.start + segment.offset)
+          const end = at(token.end + segment.offset)
+          // 분석기가 범위 밖을 가리키면 버린다. 그 형태소를 믿고 어절을 자르면
+          // 없던 오류가 생긴다 — 조용히 빠지는 편이 낫다.
+          if (start >= end || end > text.length) continue
+          morphemes.push({ text: token.text, pos: token.pos, start, end })
         }
       }
       return morphemes

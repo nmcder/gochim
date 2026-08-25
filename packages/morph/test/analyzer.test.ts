@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { check, fix, groupWords } from '@gochim/core'
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
+import { goldenSamples } from '../../core/test/samples.js'
 import { createAnalyzer, type GochimAnalyzer } from '../src/index.js'
 
 /**
@@ -107,12 +110,148 @@ describe('형태소 규칙의 선언된 예시', () => {
   })
 })
 
-describe('한 번 고친 결과는 더 고칠 것이 없다', () => {
+/**
+ * 밖에서 온 정상 한국어.
+ *
+ * 위의 '3층에서도 건드리면 안 되는 문장' 열두 개는 규칙을 다듬으며 함께 고른 것이라
+ * 통과하는 것이 당연하다. 이쪽은 규칙을 보지 않고 따로 지은 문장 뭉치라
+ * **정말 처음 보는 글에서 어떤지**를 잰다.
+ *
+ * 지금 여기서 나오는 오탐은 data/golden/known-false-positives.json 에 갈래별로
+ * 적혀 있다. 그 목록에 없는 갈래가 하나라도 나오면 무언가 새로 망가진 것이다.
+ * (`npm run guard` 는 여기에 더해 저장소 자기 산문까지 훑는다)
+ */
+describe('밖에서 온 정상 문장에 처음 보는 오탐이 없다', () => {
+  const load = <T>(name: string): T =>
+    JSON.parse(readFileSync(fileURLToPath(new URL(`../../../data/golden/${name}`, import.meta.url)), 'utf8')) as T
+
+  const wild = load<{ sentences: string[] }>('wild.json')
+  const known = new Set(
+    load<{ entries: { signatures: string[] }[] }>('known-false-positives.json').entries.flatMap((e) => e.signatures),
+  )
+
+  /**
+   * 서명이 들어맞는가. `*`로 끝나면 앞부분만 맞으면 된다 —
+   * 규칙이 조사까지 물고 발화하는 자리가 있어서다(`군데가·군데를·군데에`는 한 갈래다).
+   * scripts/guard.mjs 도 같은 규약을 쓴다. 목록 자체는 한 파일에만 있다.
+   */
+  const isKnown = (key: string): boolean =>
+    known.has(key) || [...known].some((k) => k.endsWith('*') && key.startsWith(k.slice(0, -1)))
+
+  it.each([
+    ['1층만', false],
+    ['형태소 층 포함', true],
+  ])('%s', (_label, withMorph) => {
+    const unknown: string[] = []
+    for (const sentence of wild.sentences) {
+      for (const d of check(sentence, withMorph ? { analyzer } : {})) {
+        if (d.severity === 'warning') continue
+        if (isKnown(`${d.ruleId}|${d.text}`)) continue
+        unknown.push(`${d.ruleId}: "${d.text}" → "${d.suggestions[0]}"  |  ${sentence}`)
+      }
+    }
+    expect(unknown, '알고 있던 갈래가 아니다 — 규칙이 새로 망가졌거나, 목록에 없던 오탐이다').toEqual([])
+  })
+
+  it('알려진 오탐 목록이 낡지 않았다', () => {
+    const firing = new Set<string>()
+    for (const sentence of wild.sentences) {
+      for (const withMorph of [false, true]) {
+        for (const d of check(sentence, withMorph ? { analyzer } : {})) {
+          if (d.severity !== 'warning') firing.add(`${d.ruleId}|${d.text}`)
+        }
+      }
+    }
+    // 목록에는 저장소 산문에서만 나오는 갈래도 있으므로, 여기서는 **이 뭉치에서 나오던 것**만 본다.
+    // 그것마저 안 나오면 고쳐진 것이니 목록에서 지워야 한다 — `npm run guard`가 어느 것인지 알려 준다.
+    //
+    // 규칙 id를 손으로 적어 두었더니 그 규칙들이 다 고쳐진 뒤에도 목록이 남아 테스트가
+    // 헛돌았다. 형태소 층 규칙만 저장소 산문에서 나오므로, 나머지는 전부 여기서 나와야 한다.
+    const fromWild = [...known].filter((k) => !k.startsWith('morph-'))
+    const stale = fromWild.filter((k) => !firing.has(k))
+    expect(stale, 'guard.mjs를 돌려 확인하고 known-false-positives.json에서 지울 것').toEqual([])
+  })
+})
+
+/**
+ * 자리 셈법 — garu-ko는 코드포인트, 자바스크립트 문자열은 UTF-16.
+ *
+ * 이모지 하나가 서러게이트 쌍으로 두 자리를 차지하므로, 옮겨 주지 않으면 그 뒤의
+ * 모든 자리가 1씩 밀린다. 밀린 자리로 어절을 자르면 아무 규칙도 맞아떨어지지 않아
+ * **형태소 층이 통째로 죽는다.** 실측 재현율 0.955 → 0.790.
+ *
+ * 이 고장은 **틀린 자리에 밑줄을 긋는 게 아니라 아무 데도 안 긋는** 종류라 조용하다.
+ * 카톡·SNS가 주 사용처인데 거기서 3층이 안 돌고 있었고 아무도 몰랐다.
+ */
+describe('이모지가 섞여도 자리가 맞는다', () => {
+  const 문장 = [
+    '오늘 학교끝나고 친구랑 놀았다',
+    '물이끓으면 면을 넣으세요',
+    '아무리봐도 이건 아니야',
+    '눈물이났습니다 정말로',
+    '누구나 할수있는 일이야',
+  ]
+  const sig = (ds: ReturnType<typeof check>, shift: number) =>
+    ds.map((d) => `${d.ruleId}@${d.start - shift}:${d.end - shift}→${d.suggestions[0]}`).join(' | ')
+
+  it.each(문장)('%s', (s) => {
+    const 맨몸 = sig(check(s, { analyzer }), 0)
+    expect(맨몸).not.toBe('') // 표본이 아무것도 안 잡으면 이 테스트는 헛돈다
+    for (const 앞 of ['🙂 ', '🙂🎉👍 ', 'ㅋㅋ ']) {
+      expect(sig(check(앞 + s, { analyzer }), 앞.length), `앞에 "${앞}"`).toBe(맨몸)
+    }
+  })
+
+  it('진단 구간이 서러게이트 쌍을 끊지 않는다', () => {
+    const 글 = '가족과 🙂 함께 학교끝나고 왔다. 물이끓으면 🎉 알려 줘.'
+    for (const d of check(글, { analyzer })) {
+      expect(글.slice(d.start, d.end), `${d.ruleId}의 구간`).toBe(d.text)
+      // 잘라 낸 조각에 짝 잃은 서러게이트가 남아 있으면 자리가 어긋난 것이다.
+      expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(글.slice(d.start, d.end))).toBe(false)
+    }
+  })
+})
+
+/**
+ * 멱등 — 고친 글을 다시 고쳐도 그대로다 (두 층 다 켠 채로).
+ *
+ * 여기가 진짜 위험한 자리다. 1층과 형태소 층은 **같은 자리를 반대로 판정할 수 있다.**
+ * 실제로 `표기뿐이다`를 두고 1층은 붙이고(`josa-spaced`) 형태소 층은 뗐다
+ * (`morph-eojeol-split`). 자동 고침이 켜져 있으면 사용자 화면에서 글자가 깜빡인다.
+ *
+ * 이 테스트가 빨개지면 되풀이 상한을 올릴 일이 아니라 **어느 층이 옳은지 정할** 일이다.
+ * 위 자리는 체언 뒤의 `뿐`이 조사(제41항)라는 쪽으로 정리했다.
+ *
+ * 1층만 켠 쪽은 `packages/core/test/idempotence.test.ts`에 있다.
+ */
+describe('고친 글을 다시 고쳐도 그대로다 (형태소 층 포함)', () => {
+  const samples = goldenSamples()
+
+  it('표본이 충분히 모였다', () => {
+    // 표본 수집이 조용히 망가지면 아래 테스트가 0개를 돌며 통과해 버린다.
+    expect(samples.length).toBeGreaterThan(3000)
+  })
+
+  it('fix(fix(x)) === fix(x)', () => {
+    const broken: string[] = []
+    for (const text of samples) {
+      const once = fix(text, { analyzer })
+      const twice = fix(once, { analyzer })
+      if (once === twice) continue
+      const thrice = fix(twice, { analyzer })
+      const kind = thrice === once ? '진동' : '미수렴'
+      broken.push(`[${kind}] ${text.slice(0, 50)}\n    1회 ${once.slice(0, 50)}\n    2회 ${twice.slice(0, 50)}`)
+    }
+    expect(broken.slice(0, 5).join('\n  ')).toBe('')
+    expect(broken).toHaveLength(0)
+  }, 120_000)
+
   it.each([
     '반찬은 네가 먹을만큼만 덜어서 가져가.',
     '지금 회의중이라 못 받아.',
     '누구나 할수있는 일이야.',
     '나도 너 만큼 잘할 수 있어.',
+    '메타언어 문장과 인터넷 유희 표기 뿐이다.',
   ])('%s', (sentence) => {
     const once = fix(sentence, { analyzer })
     expect(fix(once, { analyzer })).toBe(once)

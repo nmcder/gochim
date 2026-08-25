@@ -67,6 +67,14 @@ export const dueumRyul = defineRule({
   counterExamples: ['이번 채용은 경쟁률이 높았다.', '합격률을 계산해 보자.'],
 })
 
+/**
+ * 수를 세는 말 — 수사와 수 관형사.
+ *
+ * 국어에서 **닫혀 있는 몇 안 되는 집합**이라 목록으로 적어도 뒷문이 되지 않는다.
+ * 새 수사가 생기는 일은 없다.
+ */
+const SUSA = /(?:\d+|[일이삼사오육칠팔구십백천만억조]+|수[십백천만]+|몇[십백천]?|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열[한두세네댓]?|스무|스물[한두세네댓]?|서른|마흔|쉰|예순|일흔|여든|아흔|여남은|댓|서너|너덧|대여섯|예닐곱|일고여덟)여?$/
+
 /** 두음법칙 — 어두의 '년'은 '연'으로 적는다. 수 뒤에 오는 의존명사 '년'은 그대로. */
 export const dueumYeon = defineRule({
   id: 'dueum-yeon',
@@ -75,6 +83,10 @@ export const dueumYeon = defineRule({
   pattern: /(?<![가-힣\d])년(도|말|초|간|중)/g,
   resolve(ctx) {
     const tail = ctx.match[1] ?? ''
+    // 앞말과 띄어 쓴 의존명사는 어두가 아니다 — '십 년간·몇 년도·120여 년간'.
+    // lookbehind 는 공백을 어두로 읽으므로 여기서 앞 어절을 직접 본다.
+    const before = ctx.text.slice(0, ctx.index)
+    if (/[ \t]$/.test(before) && SUSA.test(before.trimEnd())) return null
     return {
       suggestions: [`연${tail}`],
       message: "한자어 첫머리에서는 '연'으로 적습니다.",
@@ -83,7 +95,15 @@ export const dueumYeon = defineRule({
     }
   },
   examples: [{ wrong: '년도별 판매 실적을 정리했습니다.', right: '연도별 판매 실적을 정리했습니다.' }],
-  counterExamples: ['2024년도 예산안을 확정했다.', '올해 매출은 작년 대비 늘었다.'],
+  counterExamples: [
+    '2024년도 예산안을 확정했다.',
+    '올해 매출은 작년 대비 늘었다.',
+    '십 년간 같은 일을 했다.',
+    '몇 년도에 있었던 일인지 모르겠다.',
+    '120여 년간 이어진 전통이다.',
+    '스물세 년간은 아무래도 어색한 말이다.',
+    '수십 년간 자리를 지켰다.',
+  ],
 })
 
 /** `-슴`은 없다. 명사형 어미는 `-(으)ㅁ`이라 `했음`이다. */

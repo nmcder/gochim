@@ -374,7 +374,11 @@ export const josaMan = defineRule({
       const word = ctx.match[1] ?? ''
       const tail = finalOf(word.slice(-1))
       if (tail === 'ㄴ' || tail === 'ㄹ') return null
-      if (/[은는이가을를]$/.test(word)) return null
+      // 격조사가 이미 붙은 어절 뒤는 건드리지 않는다. 부사격 조사 '에'까지 넣는 것은
+      // 동사 '말다'의 관형사형 '만'이 언제나 그 자리에 서기 때문이다 — '물에 만 밥'.
+      // 붙여 놓으면 뒤 명사를 꾸밀 말이 사라져 문장이 깨진다.
+      // '집에 만 있었다'처럼 부사격 뒤의 보조사를 띄어 쓴 것은 놓친다. 망가뜨리는 것보다 싸다.
+      if (/[은는이가을를]$|에$|에서$|으?로$|에게$|한테$/.test(word)) return null
       if (BEFORE_MAN_NUMERAL.test(word)) return null
       if (AFTER_MAN_UNIT.test(ctx.text.slice(ctx.index + ctx.match[0].length))) return null
       return {

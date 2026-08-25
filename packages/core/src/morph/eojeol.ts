@@ -87,7 +87,11 @@ const KEEP_JOINED = new Set([
  * `다시 보기`가 원칙이지만 화면에 붙은 이름으로 굳었다. 방송 다시보기 화면에서
  * 밑줄이 그어지면 고침이 틀린 쪽으로 보인다.
  */
-const KEEP_JOINED_NOUN = ['다시보기', '다시듣기', '미리보기', '미리듣기']
+const KEEP_JOINED_NOUN = [
+  '다시보기', '다시듣기', '미리보기', '미리듣기',
+  // 사이시옷을 낀 `것` 합성어. 사전에 오른 한 낱말인데 분석기가 `것/NNB`를 떼어 낸다.
+  '뒤엣것', '앞엣것', '위엣것', '아래엣것',
+]
 
 /**
  * 명사 뒤에서는 손대지 않는 어간.
@@ -123,6 +127,23 @@ const UNIT_NNB = new Set(['명', '개', '권', '장', '시', '분', '원', '번'
  * 읽는다. 둘 다 의존명사가 아니다. 사전에 없는 말을 만나면 분석기가 짐작하는 자리다.
  */
 const NOT_REALLY_NNB = new Set(['엔', '내', '건', '란'])
+
+/**
+ * 조사로도 쓰이고 의존명사로도 쓰이는 말.
+ *
+ * 같은 글자가 자리에 따라 품사를 갈아입는다.
+ *   관형사형 어미 뒤 → 의존명사라 띄어 쓴다 (`할 뿐이다`, `아는 만큼`, `본 대로`) — 제42항
+ *   **체언 뒤 → 조사라 붙여 쓴다** (`표기뿐이다`, `너만큼`, `법대로`) — 제41항
+ *
+ * 분석기는 체언 뒤에서도 이것들을 NNB로 읽어 낸다. 그대로 믿고 가르면 1층의
+ * `josa-spaced`가 도로 붙이고, 두 층이 무한히 진동한다. 실제로 그랬다.
+ *
+ * `만`은 넣지 않는다. 체언 뒤에서도 시간의 경과를 뜻하는 의존명사일 수 있다 — `사흘 만에`.
+ */
+const NNB_OR_JOSA = new Set(['뿐', '만큼', '대로'])
+
+/** 체언. 이 뒤에 오는 `뿐·만큼·대로`는 조사다. */
+const CHEEON = new Set(['NNG', 'NNP', 'NP', 'NR', 'XSN'])
 
 /**
  * 잘라 낸 조각이 이것이면 가르지 않는다.
@@ -271,10 +292,40 @@ interface Cut {
   word: string
 }
 
+/**
+ * 관형사형 어미 + 한 글자가 **어미 하나로도 읽히는** 꼴.
+ *
+ * 분석기가 문맥에 따라 읽기를 바꾼다. 같은 `주는데`를 어떤 문장에서는
+ * `주/VX + 는데/EC`(연결어미)로, 어떤 문장에서는 `주/VV + 는/ETM + 데/NNB`(의존명사)로
+ * 읽는다. 뒤엣것을 믿고 가르면 **연결어미 `-는데`가 통째로 깨진다.**
+ * 어미는 닫힌 집합이라 여기서는 목록이 정답이다.
+ *
+ * 1층의 `nnb-de-josa`도 같은 이유로 `-은데/-ㄴ데`를 통째로 포기하고 있다.
+ */
+const EOMI_LOOKALIKE = new Set([
+  '는데', '은데', '던데',
+  '는가', '은가', '던가',
+  '는지', '은지', '던지', '을지', '을까',
+])
+
+/**
+ * 그중 **뒤에 조사가 붙으면** 어미로는 설명이 안 되는 것.
+ *
+ * 어미 뒤에는 조사가 못 오므로 `모으는데에`의 `데`는 의존명사가 맞다.
+ * 이 빠져나갈 길이 `데`에만 있는 이유는, `-은가·-는지`는 명사절이 되어
+ * 조사를 달 수 있기 때문이다 — `같은가를 잰다`, `가는지를 물었다`.
+ */
+const DE_LIKE = new Set(['는데', '은데', '던데'])
+
 /** 이 자리에서 어절을 갈라야 하는가. 갈래를 돌려주고, 아니면 null. */
 function cutKind(word: Word, i: number): Kind | null {
   const prev = word.morphemes[i - 1]!
   const cur = word.morphemes[i]!
+
+  if (prev.pos === 'ETM' && EOMI_LOOKALIKE.has(prev.text + cur.text)) {
+    const next = word.morphemes[i + 1]
+    if (!DE_LIKE.has(prev.text + cur.text) || !next || !isJosa(next.pos)) return null
+  }
 
   if (cur.pos === 'NNB') {
     // 수 + 단위명사는 붙여 쓸 수 있다 — `10년`, `90점`, `3개`. (제43항 다만)
@@ -282,6 +333,7 @@ function cutKind(word: Word, i: number): Kind | null {
     // 단위명사인데 앞에 수가 없으면 단위로 쓰인 것이 아니다. ('여명'을 '여 명'으로 쪼개는 오분석 방지)
     if (UNIT_NNB.has(cur.text) && !['SN', 'NR', 'MM'].includes(prev.pos)) return null
     if (NOT_REALLY_NNB.has(cur.text)) return null
+    if (NNB_OR_JOSA.has(cur.text) && CHEEON.has(prev.pos)) return null
     // `그분·이분·저분·윗분·여러분`은 관형사와 붙어 한 낱말이 된 말이다.
     if (cur.text === '분' && prev.pos === 'MM') return null
     return 'nnb'

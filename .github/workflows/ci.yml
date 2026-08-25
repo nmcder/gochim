@@ -28,6 +28,15 @@ jobs:
       - name: 코어 빌드
         run: npm run build
 
+      # 여기가 정확도의 관문이다. `npm test`는 골든셋 안에서만 보고,
+      # 아래 성적표는 어겨도 종료 코드를 내지 않는다 — guard만 실패한다.
+      #
+      # 특히 **밖에서 온 한국어**(data/golden/wild.json 과 저장소 자기 산문)를 함께 재고,
+      # data/golden/known-false-positives.json 에 없는 오탐이 하나라도 나오면 여기서 멈춘다.
+      # 골든셋의 '정상 문장'은 규칙을 다듬는 데 쓴 문장이라 그것만으로는 정밀도를 못 잰다.
+      - name: 지켜야 할 선 (정밀도·재현율 관문)
+        run: npm run guard
+
       - name: 데모 빌드
         run: npm run build -w @gochim/demo
 
