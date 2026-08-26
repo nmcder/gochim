@@ -20,6 +20,13 @@ import { openIgnoreStore, type IgnoreStore } from '@gochim/store'
 const DEBOUNCE_MS = 300
 /** 아주 긴 글에서 한 번에 검사할 최대 길이. 넘어가면 커서 주변만 본다. */
 const WINDOW_SIZE = 4000
+/**
+ * 창 경계에서 어절을 온전히 담으려고 물러나는 최대 거리.
+ *
+ * 상한이 없으면 공백 없는 긴 글(긴 URL, 붙여 넣은 데이터)에서 창이 글 전체로
+ * 불어난다. 그러면 창을 씨운 이유가 사라져 3층이 다시 900ms로 돌아간다.
+ */
+const WORD_BACKOFF = 200
 
 let settings: Settings | null = null
 let ignoreStore: IgnoreStore | null = null
@@ -83,6 +90,13 @@ interface Session {
    * 타자마다 전체를 훑지 않으려는 것이다.
    */
   whole: Diagnostic[] | null
+  /**
+   * 마지막으로 검사한 창의 범위.
+   *
+   * 커서가 이 밖으로 나가면 다시 검사해야 한다. 안 그러면 긴 글에서 창 밖으로 옮긴
+   * 자리는 **그 자리에서 글자를 치기 전까지** 검사되지 않는다.
+   */
+  window: { start: number; end: number } | null
 }
 
 /**
@@ -109,7 +123,9 @@ function ensureMorphClient(): MorphClient | null {
   morphClient = createMorphClient({
     ...(url ? { workerUrl: url } : {}),
     onResult(diagnostics) {
-      if (!session) return
+      // 답이 오는 사이 확장을 끌 수 있다. 그때 그대로 받으면 꺼 둔 뒤에
+      // 밑줄이 되살아난다 — `autoFix` 에 `enabled` 검사를 넣은 것과 같은 자리다.
+      if (!session || settings?.enabled !== true) return
       session.morph = diagnostics
       paint()
       // 형태소 결과는 1층보다 늦게 온다. 자동 고침은 이 자리에서 한 번 더 봐야 한다 —
@@ -372,7 +388,10 @@ function wholeDiagnostics(): Diagnostic[] {
   if (session.whole) return session.whole
   const text = session.target.getText()
   // 창 안에 다 들어오는 글이면 이미 검사해 둔 결과가 곧 전체다. 형태소 층까지 합쳐져 있다.
-  if (text.length <= WINDOW_SIZE) return (session.whole = session.diagnostics)
+  // 창 안에 드는 글은 **캐시하지 않는다.** 형태소 결과는 1층보다 늦게 오는데,
+  // 캐시해 두면 그 순간의 1층만 들어 있는 목록이 그대로 굳어 '모두 고치기'가
+  // 3층을 빠뜨린다. 같은 값을 다시 읽는 것뿐이라 캐시할 이유도 없다.
+  if (text.length <= WINDOW_SIZE) return session.diagnostics
   return (session.whole = check(text, {
     ignore: ignoreStore.keys(),
     minConfidence: settings.minConfidence,
@@ -509,8 +528,14 @@ function windowOf(text: string, caret: number): { slice: string; offset: number 
   let end = Math.min(text.length, start + WINDOW_SIZE)
   start = Math.max(0, end - WINDOW_SIZE)
   // 어절 중간에서 자르면 없는 오류가 생긴다. 공백까지 물러난다.
-  while (start > 0 && !/\s/.test(text[start - 1] ?? '')) start -= 1
-  while (end < text.length && !/\s/.test(text[end] ?? '')) end += 1
+  //
+  // 다만 **물러나는 거리에 상한을 둔다.** 없으면 공백 없는 긴 글(긴 URL,
+  // 붙여 넣은 데이터)에서 창이 글 전체로 불어나 상한을 둔 목적이 사라진다.
+  // 그러면 3층이 다시 900ms로 돌아간다.
+  const floor = start - WORD_BACKOFF
+  const ceil = end + WORD_BACKOFF
+  while (start > 0 && start > floor && !/\s/.test(text[start - 1] ?? '')) start -= 1
+  while (end < text.length && end < ceil && !/\s/.test(text[end] ?? '')) end += 1
   return { slice: text.slice(start, end), offset: start }
 }
 
@@ -532,6 +557,7 @@ function runCheck(): void {
   if (!session || !settings?.enabled || !ignoreStore) return
   const text = session.target.getText()
   const { slice, offset } = windowOf(text, caretOf(session.target))
+  session.window = { start: offset, end: offset + slice.length }
 
   const found = check(slice, {
     ignore: ignoreStore.keys(),
@@ -551,7 +577,24 @@ function runCheck(): void {
     return
   }
 
-  if (settings.morph) ensureMorphClient()?.request(text, [...ignoreStore.keys()])
+  // 형태소 층에도 **1층과 똑같은 창**을 보낸다. 예전에는 글 전체를 보냈다.
+  //
+  // 한 줄로 두 가지가 함께 잡힌다.
+  //   비용   3층은 글 길이에 비례해 늘었다 — 32,000자에 912ms. 창으로 자르면 86ms에서 평평하다
+  //   자리   커서에서 한참 떨어진 자리가 자동 고침 대상이 되던 것이 사라진다
+  //
+  // 사용자 설정도 함께 싣는다. 안 실었더니 **3층만 설정을 무시하고 있었다** —
+  // 문턱 0.99에 분류를 `spelling`만 켜 둔 사람에게 1층은 0건을 내는데 워커는 46건을
+  // 보냈고 그중 44건이 꺼 둔 띄어쓰기였다. 설정 화면이 거짓말을 한 셈이다.
+  if (settings.morph) {
+    ensureMorphClient()?.request({
+      text: slice,
+      offset,
+      ignore: [...ignoreStore.keys()],
+      minConfidence: settings.minConfidence,
+      ...(settings.categories.length > 0 ? { categories: settings.categories } : {}),
+    })
+  }
 }
 
 function scheduleCheck(delay = DEBOUNCE_MS): void {
@@ -592,6 +635,7 @@ function attach(target: EditableTarget): void {
     dismissed: null,
     composing: false,
     lastInput: 0,
+    window: null,
     writing: false,
     recentFixes: new Set(),
     whole: null,
@@ -703,7 +747,19 @@ document.addEventListener(
 // 커서가 오류 밖으로 나가면 저절로 띄운 카드는 닫고, 물려 둔 것도 푼다.
 document.addEventListener('selectionchange', () => {
   if (!session) return
-  const hit = diagnosticAtCaret(caretOf(session.target))
+  const caret = caretOf(session.target)
+
+  // 커서가 검사한 창 밖으로 나갔다면 창을 그리로 옮겨 다시 본다.
+  //
+  // 창을 씌우면서 생긴 일이다. 예전에는 3층이 글 전체를 봐서 어디든 밑줄이 그어졌는데,
+  // 이제 창 밖은 그 자리에서 글자를 치기 전까지 비어 있다. 스크롤도 '모두 고치기'도
+  // 그 자리를 되찾아 주지 못한다.
+  //
+  // 매번 걸지 않고 **벗어났을 때만** 건다. 재검사는 `session.morph`를 비우므로
+  // 커서를 움직일 때마다 걸면 3층 밑줄이 깜빡인다.
+  if (session.window && (caret < session.window.start || caret > session.window.end)) scheduleCheck()
+
+  const hit = diagnosticAtCaret(caret)
 
   // 커서가 물린 진단을 벗어났다. 이제 다시 띄워도 성가시지 않다.
   if (session.dismissed && (!hit || session.dismissed !== keyOf(hit))) session.dismissed = null

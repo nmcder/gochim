@@ -1,4 +1,4 @@
-import { allMorphRules, check, type Diagnostic } from '@gochim/core'
+import { allMorphRules, check, type Category, type Diagnostic } from '@gochim/core'
 import { createAnalyzer, type GochimAnalyzer } from '@gochim/morph'
 
 /**
@@ -12,7 +12,14 @@ import { createAnalyzer, type GochimAnalyzer } from '@gochim/morph'
  * 사용자 입장에서는 밑줄이 즉시 뜨고 잠시 뒤 몇 개가 더 붙는다.
  */
 
-export type WorkerRequest = { id: number; text: string; ignore: string[] }
+export type WorkerRequest = {
+  id: number
+  text: string
+  ignore: string[]
+  /** 사용자 설정. 안 실으면 3층만 설정을 무시하게 된다. */
+  minConfidence?: number
+  categories?: Category[]
+}
 export type WorkerResponse =
   | { type: 'ready'; initMs: number }
   | { type: 'result'; id: number; diagnostics: Diagnostic[] }
@@ -52,6 +59,8 @@ async function drain(): Promise<void> {
         rules: [],
         morphRules: allMorphRules,
         ignore: request.ignore,
+        ...(request.minConfidence != null ? { minConfidence: request.minConfidence } : {}),
+        ...(request.categories && request.categories.length > 0 ? { categories: request.categories } : {}),
       })
       post({ type: 'result', id: request.id, diagnostics })
     }

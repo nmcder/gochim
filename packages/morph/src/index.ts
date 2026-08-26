@@ -86,9 +86,20 @@ export async function createAnalyzer(options: CreateAnalyzerOptions = {}): Promi
       const at = (cp: number): number => (map ? (map[Math.max(0, Math.min(cp, last))] ?? text.length) : cp)
 
       for (const segment of splitSentences(text)) {
+        // `splitSentences`는 문장 앞 공백을 **잘라 내면서 offset은 그대로 둔다.**
+        // 그만큼 밀어 주지 않으면 그 문장의 형태소가 통째로 한 칸씩 어긋나고,
+        // 어긋난 자리로는 어느 규칙도 맞아떨어지지 않아 **3층이 조용히 죽는다.**
+        // 자리가 틀린 밑줄이 그어지는 게 아니라 아무것도 안 그어진다 — 이모지 사고와 같은 갈래다.
+        //
+        // 창을 씌우면서 흔해졌다. 커서 둘레를 자를 때 어절 경계까지 물러나는데,
+        // 겹친 공백이나 줄바꿈 앞에서 물러나면 창이 공백으로 시작한다.
+        let from = segment.offset
+        if (!/^\s/.test(segment.text)) {
+          while (/\s/.test(text[at(from)] ?? '')) from += 1
+        }
         for (const token of tokensOf(garu.analyze(segment.text))) {
-          const start = at(token.start + segment.offset)
-          const end = at(token.end + segment.offset)
+          const start = at(token.start + from)
+          const end = at(token.end + from)
           // 분석기가 범위 밖을 가리키면 버린다. 그 형태소를 믿고 어절을 자르면
           // 없던 오류가 생긴다 — 조용히 빠지는 편이 낫다.
           if (start >= end || end > text.length) continue

@@ -1,4 +1,4 @@
-import type { Diagnostic } from '@gochim/core'
+import type { Category, Diagnostic } from '@gochim/core'
 
 /**
  * 콘텐츠 스크립트와 형태소 분석기 사이의 말.
@@ -26,20 +26,36 @@ import type { Diagnostic } from '@gochim/core'
  * 거기는 출처도 CSP도 확장의 것이라 막힐 일이 없고, 탭이 몇이든 **하나만** 뜬다.
  */
 
+/**
+ * 형태소 층에도 사용자 설정을 실어 보낸다.
+ *
+ * 안 실었더니 **3층만 설정을 무시하고 있었다.** 문턱을 0.99로 올리고 분류를
+ * `spelling`만 켜 둔 사용자에게, 1층은 0건을 내는데 워커는 46건을 보냈고
+ * 그중 44건이 사용자가 꺼 둔 띄어쓰기였다. 설정 화면이 거짓말을 한 셈이다.
+ *
+ * 무시 사전만 실려 있던 것은, 그것이 처음부터 워커 쪽에서 걸러야 하는 값이었기
+ * 때문이다. 나머지 둘도 같은 자리에서 걸러야 한다.
+ */
+export interface MorphOptions {
+  ignore: string[]
+  /** 이 확신도 밑의 진단은 내지 않는다. */
+  minConfidence?: number
+  /** 켜 둔 분류만. 비어 있으면 전부. */
+  categories?: Category[]
+}
+
 /** 콘텐츠 스크립트 → 서비스 워커. */
-export interface MorphAsk {
+export interface MorphAsk extends MorphOptions {
   type: 'gochim:morph'
   id: number
   text: string
-  ignore: string[]
 }
 
 /** 서비스 워커 → 오프스크린 문서. */
-export interface MorphRun {
+export interface MorphRun extends MorphOptions {
   type: 'gochim:morph-run'
   id: number
   text: string
-  ignore: string[]
 }
 
 export type MorphReply =

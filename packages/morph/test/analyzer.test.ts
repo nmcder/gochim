@@ -202,6 +202,21 @@ describe('이모지가 섞여도 자리가 맞는다', () => {
     }
   })
 
+  // 창을 쓰면서 흔해졌다. 커서 둘레를 자를 때 어절 경계까지 물러나는데,
+  // 겹친 공백이나 줄바꿈 앞에서 물러나면 창이 공백으로 시작한다.
+  it.each([' ', '  ', '\n', ' \n ', '\t'])('앞에 공백 %j 이 붙어도 같은 자리를 가리킨다', (앞) => {
+    const 본문 = '오늘 학교끝나고 친구랑 놀았다.'
+    const 맨몸 = check(본문, { analyzer }).filter((d) => d.ruleId.startsWith('morph'))
+    expect(맨몸.length).toBeGreaterThan(0)
+
+    const 글 = 앞 + 본문
+    const 붙인 = check(글, { analyzer }).filter((d) => d.ruleId.startsWith('morph'))
+    // 예전에는 `splitSentences` 가 앞 공백을 잘라 내면서 offset 은 그대로 두어,
+    // 그 문장의 형태소가 통째로 어긋나 **3층이 조용히 죽었다.**
+    expect(붙인.map((d) => `${d.ruleId}|${d.text}`)).toEqual(맨몸.map((d) => `${d.ruleId}|${d.text}`))
+    for (const d of 붙인) expect(글.slice(d.start, d.end)).toBe(d.text)
+  })
+
   it('진단 구간이 서러게이트 쌍을 끊지 않는다', () => {
     const 글 = '가족과 🙂 함께 학교끝나고 왔다. 물이끓으면 🎉 알려 줘.'
     for (const d of check(글, { analyzer })) {

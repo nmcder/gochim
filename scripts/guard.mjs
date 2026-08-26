@@ -317,11 +317,24 @@ const ENUM_SLASH = /[가-힣]\/[가-힣]/
 // 코드나 괄호가 한글에 붙어 있으면(`며칠`이라는) 지웠을 때 조사가 홀로 남아 없던 오류가 생긴다.
 const GLUED = /(`[^`]*`|\)|\])[가-힣]/
 const skipLine = (raw) => ARROW.test(raw) || ENUM_SLASH.test(raw) || GLUED.test(raw)
+/**
+ * 홀로 선 조사. 한국어 산문에서는 이런 어절이 나오지 않는다.
+ *
+ * 코드 조각을 지우면 그 자리에 붙어 있던 조사가 홀로 남는다 —
+ * `` `sendResponse` 로만 `` 이 `답은 로만` 이 되는 식이다. 그러면 규칙이
+ * 있지도 않은 오류를 잡아 관문이 헛돈다. **뽑아내기 쪽 문제라 여기서 치운다.**
+ * (규칙을 고칠 일이 아니다 — 사용자 글에는 이런 어절이 애초에 없다)
+ */
+const LONE_JOSA =
+  /(?<=^|\s)(?:으로만|으로|로만|로서|로써|로|은|는|이|가|을|를|에게|에서|에|와|과|처럼|만큼|만|도|의|께|부터|까지|보다|라도|이나|나)(?=\s|$)/g
+
 const scrub = (line) =>
   line
     .replace(/`[^`]*`/g, ' ')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/\*\*|__|~~/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(LONE_JOSA, ' ')
     .replace(/\s+/g, ' ')
 const longEnough = (line) => line.replace(/[^가-힣]/g, '').length >= 10
 

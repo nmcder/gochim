@@ -42,6 +42,9 @@ chrome.runtime.onMessage.addListener((message: MorphAsk, _sender, sendResponse) 
         id: message.id,
         text: message.text,
         ignore: message.ignore,
+        // 설정을 그대로 이어 넘긴다. 여기서 떨어뜨면 3층만 설정을 무시하게 된다.
+        ...(message.minConfidence != null ? { minConfidence: message.minConfidence } : {}),
+        ...(message.categories ? { categories: message.categories } : {}),
       })
       sendResponse(reply)
     } catch (error) {
