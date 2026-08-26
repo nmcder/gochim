@@ -83,7 +83,7 @@ function buildDiagnostic(input: BuildInput): Diagnostic | null {
     // 경고는 "규정이 이쪽도 허용한다"는 안내라, 규칙이 자격을 갖췄더라도 묻지 않고 바꾸면
     // 글쓴이가 고른 표기를 빼앗는 셈이 된다. 사전형 규칙은 항목마다 경고로 내려가기도 하므로
     // 규칙 단위가 아니라 **이 진단 하나**의 심각도를 봐야 한다.
-    autoFixSafe: input.autoFixSafe && severity !== 'warning',
+    autoFixSafe: (finding.autoFixSafe ?? input.autoFixSafe) && severity !== 'warning',
     ...(finding.explain ? { explain: finding.explain } : {}),
     ...(finding.refs ? { refs: finding.refs } : {}),
   }

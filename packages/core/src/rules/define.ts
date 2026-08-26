@@ -140,6 +140,18 @@ export function defineLexicon(spec: LexiconSpec): Rule {
         ...(entry.refs ? { refs: entry.refs } : {}),
         ...(entry.confidence != null ? { confidence: entry.confidence } : {}),
         ...(entry.severity ? { severity: entry.severity } : {}),
+        // **문맥 가드를 단 항목은 자동 적용하지 않는다.**
+        //
+        // `when`을 달았다는 것은 그 표기가 **다른 뜻으로도 읽힌다**는 뜻이다.
+        // 그 가드가 뚫리면 맞는 글이 망가진다. 실제로 그랬다 —
+        // `회비 일부로`(一部로)를 `일부러`로, `살이 찌게`를 `찌개`로,
+        // `커튼 바램`(바래다의 명사형)을 `바람`으로, `물건 금새`(값)를 `금세`로 고쳤다.
+        // 넷 다 사전에 반례가 적혀 있었지만, 반례가 가드와 **같은 손으로** 쓰여
+        // 가드 안쪽만 확인하고 바깥은 건드리지 못했다.
+        //
+        // 그래서 사람이 표시하게 두지 않고 여기서 구조로 막는다. 잊을 수가 없다.
+        // 사전 전체에 `autoFixSafe`를 걸어도 가드 달린 항목은 빠진다.
+        ...(entry.when ? { autoFixSafe: false } : {}),
       }
     },
     examples,

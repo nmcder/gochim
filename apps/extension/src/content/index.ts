@@ -303,8 +303,23 @@ function autoFix(final = false): boolean {
     return false
   }
 
-  // 손을 뗄 때는 마지막 어절까지 본다. 그때는 다 쓴 것이 확실하다.
-  const boundary = final ? text.length + 1 : settledBefore(text, caret)
+  // 손을 뗄 때는 마지막 어절까지 본다 — **다 썼다는 표시가 있을 때만.**
+  //
+  // 예전에는 final이면 무조건 text.length + 1이었다. 그러면 [settledBefore]가 길게 설명한
+  // '지금 치는 낱말은 건드리지 않는다'는 규칙이 이 자리에서만 풀린다. 사용자는 낱말을
+  // 치다 말고도 손을 뗀다 — 다른 칸을 누르거나, Tab을 치거나, 창을 옮길 때다.
+  //
+  // 정상 문장 130개를 한 글자씩 쳐 나가며 재 보니 그 사이 12갈래가 깨졌다.
+  //
+  //   밥을 먹지 않  →  밥을 먹지 안     (치던 말은 '않았다')
+  //   안간          →  안 간            (치던 말은 '안간힘')
+  //   덜 지         →  덜지             (치던 말은 '덜 지루했다')
+  //
+  // 그래서 종결부호나 공백으로 끝났을 때만 마지막 어절을 본다. 대신 잃는 것은
+  // 표본 500건 중 1건이다(`…직접 만듬`). 오탐은 되돌릴 수 없고 놓친 오류는
+  // 다음 글자를 치는 순간 다시 잡힌다 — ADR 0002의 비대칭 그대로다.
+  const boundary =
+    final && !justEndedWord(text, text.length) ? settledBefore(text, text.length) : final ? text.length + 1 : settledBefore(text, caret)
 
   const plan = session.diagnostics
     // **자격을 갖춘 규칙만** 묻지 않고 적용한다. 예전에는 `severity !== 'warning'`이었는데,

@@ -262,6 +262,52 @@ if (analyzer) {
   )
 }
 
+/* (가-2) 한 글자씩 쳐 나가는 동안에도 자동 고침이 손대지 않는가
+ *
+ * 위의 (가)는 **완성문**을 한 번 먹인다. 그런데 사용자는 글을 한 글자씩 치고,
+ * 확장은 그 사이사이에 고친다. **다 못 친 낱말은 거의 언제나 틀린 말처럼 보인다** —
+ * `밥을 먹지 않`은 `안`으로, `안간`은 `안 간`으로 고치고 싶어진다.
+ * 완성문만 재면 이 자리가 통째로 안 보인다.
+ *
+ * 그래서 확장의 판정을 그대로 옮겨 재다. 중복이지만, 이것이 없으면
+ * 관문이 **별로 안 일어나는 상황**만 재게 된다.
+ */
+
+const BOUNDARY_CHAR = /[\s.,!?…;:)\]}"']/
+const justEndedWord = (t, at) => BOUNDARY_CHAR.test(t[at - 1] ?? '')
+function settledBefore(t, caret) {
+  let at = Math.min(caret, t.length)
+  while (at > 0 && !/\s/.test(t[at - 1] ?? '')) at -= 1
+  return at
+}
+
+const typedHits = []
+for (const sentence of wild.sentences) {
+  for (let n = 1; n <= sentence.length; n++) {
+    const piece = sentence.slice(0, n)
+    const found = check(piece)
+    for (const boundary of [
+      justEndedWord(piece, piece.length) ? piece.length + 1 : settledBefore(piece, piece.length),
+      settledBefore(piece, piece.length),
+    ]) {
+      for (const d of found) {
+        if (!d.autoFixSafe || d.end >= boundary) continue
+        typedHits.push(`${d.ruleId}: ${d.text} → ${d.suggestions[0]}  |  친 데까지 "${piece}"  |  온 문장 "${sentence}"`)
+      }
+    }
+  }
+}
+must(
+  `정상 문장 ${wild.sentences.length}개를 한 글자씩 쳐 나가는 동안 자동 적용 0건`,
+  typedHits.length === 0,
+  `${typedHits.length}건`,
+)
+if (typedHits.length > 0) {
+  lines.push('')
+  lines.push('치는 도중에 자동으로 바뀌는 자리')
+  for (const h of [...new Set(typedHits)].slice(0, 12)) lines.push(`  ${h}`)
+}
+
 /* (나) 저장소 자기 산문 */
 
 // 이 저장소는 예시를 본문에 백틱으로 적는다 — 일부러 틀리게 적은 것이라 오탐이 아니다.
