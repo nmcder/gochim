@@ -363,7 +363,13 @@ function cutKind(word: Word, i: number): Kind | null {
     // 단위명사인데 앞에 수가 없으면 단위로 쓰인 것이 아니다. ('여명'을 '여 명'으로 쪼개는 오분석 방지)
     if (UNIT_NNB.has(cur.text) && !['SN', 'NR', 'MM'].includes(prev.pos)) return null
     if (NOT_REALLY_NNB.has(cur.text)) return null
-    if (NNB_AFTER_ETM_ONLY.has(cur.text) && CHEEON.has(prev.pos)) return null
+    // **관형사형 어미가 있을 때만** 가른다. 없으면 분석이 틀린 것이다.
+    //
+    // 예전에는 체언 뒤인 경우만 막았는데(`표기뿐이다`), 막을 것이 그것만이 아니었다.
+    // `두 가지뿐이다`에서 분석기는 `가지`를 의존명사가 아니라 **동사 `가지다`**로 읽는다.
+    // 체언이 아니라 그물을 빠져나가고, 어간 바로 뒤에 의존명사가 서는 있을 수 없는 꼴이
+    // 그대로 통과했다. 없는 것을 나열하는 대신 있어야 하는 것을 적는다.
+    if (NNB_AFTER_ETM_ONLY.has(cur.text) && prev.pos !== 'ETM') return null
     // `그분·이분·저분·윗분·여러분`은 관형사와 붙어 한 낱말이 된 말이다.
     if (cur.text === '분' && prev.pos === 'MM') return null
     return 'nnb'

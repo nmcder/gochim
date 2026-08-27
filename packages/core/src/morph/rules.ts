@@ -1,7 +1,7 @@
 import { josa } from '../hangul.js'
 import type { MorphFinding, MorphRule, MorphRuleContext } from '../types.js'
 import { morphEojeolSplit } from './eojeol.js'
-import { morphIyeot, morphJiElapsed, morphLyeogo } from './eomi.js'
+import { morphDeo, morphGuyo, morphIyeo, morphIyeot, morphJiElapsed, morphLyeogo } from './eomi.js'
 import { morphKkeseoAgreement } from './nopim.js'
 
 /**
@@ -86,6 +86,9 @@ export const allMorphRules: MorphRule[] = [
   morphJosaAttach,
   morphLyeogo,
   morphIyeot,
+  morphIyeo,
+  morphGuyo,
+  morphDeo,
   morphJiElapsed,
   morphKkeseoAgreement,
 ]

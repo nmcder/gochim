@@ -89,6 +89,40 @@ for (const rule of allRules) {
 }
 must(`규칙 ${allRules.length}개의 예시가 전부 제 정답으로 고쳐짐`, brokenExamples.length === 0, `어긋남 ${brokenExamples.length}건`)
 
+/* ── 2-2. 형태소 규칙도 같은 것을 지키는가 ──────────────────────
+ *
+ * 위 관문은 `allRules`(1층)만 돌았다. 3층 규칙의 예시와 반례는 **어느 관문에도
+ * 걸리지 않고 있었다** — 테스트 수가 3,573에서 꿈쩍도 안 하기에 알았다.
+ * 규칙을 넷 더하고도 세는 것이 하나도 늘지 않으면 그건 안 재고 있다는 뜻이다.
+ *
+ * 1층까지 함께 돌린다. 3층 혼자로는 완성되지 않는 교정이 있다 —
+ * `할수있는`은 3층이 한 번, 1층이 한 번 갈라야 정답이 된다.
+ *
+ * 반례는 **이 규칙이** 건드리지 않는가만 묻는다. 1층이 무엇을 잡든 그건 다른 이야기다.
+ */
+if (analyzer) {
+  const brokenMorph = []
+  for (const rule of allMorphRules) {
+    const opts = { analyzer, rules: allRules, morphRules: [rule] }
+    for (const example of rule.examples) {
+      const got = applyFixes(example.wrong, check(example.wrong, opts))
+      if (got !== example.right) brokenMorph.push(`${rule.id}: ${example.wrong} → ${got} (정답 ${example.right})`)
+    }
+    for (const ce of rule.counterExamples ?? []) {
+      const hits = check(ce, opts).filter((d) => d.ruleId.split('/')[0] === rule.id)
+      for (const d of hits) brokenMorph.push(`${rule.id}: 반례를 건드렸다 — ${ce} (${d.text} → ${d.suggestions[0]})`)
+    }
+  }
+  const 예시수 = allMorphRules.reduce((n, r) => n + r.examples.length, 0)
+  const 반례수 = allMorphRules.reduce((n, r) => n + (r.counterExamples?.length ?? 0), 0)
+  must(
+    `형태소 규칙 ${allMorphRules.length}개의 예시 ${예시수}개·반례 ${반례수}개`,
+    brokenMorph.length === 0,
+    brokenMorph.length ? `어긋남 ${brokenMorph.length}건` : '',
+  )
+  brokenExamples.push(...brokenMorph)
+}
+
 /* ── 3. 정답셋 불변식 — 오류를 다 적용하면 정답이 나오는가 ──── */
 
 const brokenGold = []
@@ -460,20 +494,32 @@ must(
 )
 
 // (나)·(다) 선언이 근거를 갖췄는가. 정탐은 재현율 표본에서 규칙별로 센다.
+/**
+ * **두 층 설정 모두에서 센다.** 겹치는 진단은 하나만 살아남으므로, 한 설정에서만 재면
+ * 더 센 규칙에 가린 규칙이 "한 번도 정탐한 적 없는" 것으로 보인다.
+ *
+ * 실제로 그랬다. 3층에 `morph-guyo`를 들이자 1층 `eomi-guyo`의 정탐이 0이 됐다 —
+ * 규칙이 나빠진 것이 아니라 같은 자리를 더 높은 확신도가 덮은 것뿐인데, 관문은
+ * 자격을 빼앗으려 했다. 코어만 쓰는 사람에게는 그 1층 규칙이 여전히 일을 한다.
+ *
+ * 묻는 것은 "이 규칙이 실제 오류를 잡아낼 힘이 있는가"이지 "누가 이겼는가"가 아니다.
+ */
 const 정탐수 = new Map()
-for (const texts of [corpus.texts, prose.paragraphs]) {
-  for (const t of texts) {
-    const found = errorsOf(t.source, true)
-    let cursor = 0
-    for (const e of t.errors) {
-      const at = t.source.indexOf(e.wrongText, cursor)
-      if (at === -1) continue
-      cursor = at
-      const end = at + e.wrongText.length
-      const hit = found.find((d) => Math.min(d.end, end) - Math.max(d.start, at) > 0)
-      if (!hit) continue
-      const id = hit.ruleId.split('/')[0]
-      정탐수.set(id, (정탐수.get(id) ?? 0) + 1)
+for (const withMorph of [false, true]) {
+  for (const texts of [corpus.texts, prose.paragraphs]) {
+    for (const t of texts) {
+      const found = errorsOf(t.source, withMorph)
+      let cursor = 0
+      for (const e of t.errors) {
+        const at = t.source.indexOf(e.wrongText, cursor)
+        if (at === -1) continue
+        cursor = at
+        const end = at + e.wrongText.length
+        const hit = found.find((d) => Math.min(d.end, end) - Math.max(d.start, at) > 0)
+        if (!hit) continue
+        const id = hit.ruleId.split('/')[0]
+        정탐수.set(id, (정탐수.get(id) ?? 0) + 1)
+      }
     }
   }
 }
