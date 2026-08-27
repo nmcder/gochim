@@ -156,12 +156,15 @@
             <div class="row__title">받아들이는 키</div>
             <p class="row__note">
               카드가 떠 있을 때만 이 키를 가로챕니다. <code>Esc</code>로 닫는 것은 항상 같습니다.
+              <code>Tab</code>과 <code>Enter</code>는 입력칸에서 이미 하는 일이 있어서
+              (칸 옮기기, 줄 바꾸기) 카드가 떠 있는 동안 그 일을 못 합니다 —
+              <strong>다음 칸으로 가려고 <code>Tab</code>을 누르면 교정이 적용되고 그 칸에 그대로 남습니다.</strong>
             </p>
           </div>
           <select id="accept-key">
-            <option value="Tab">Tab</option>
-            <option value="Enter">Enter</option>
             <option value="Alt+Enter">Alt + Enter</option>
+            <option value="Enter">Enter</option>
+            <option value="Tab">Tab</option>
           </select>
         </div>
         <div class="row">

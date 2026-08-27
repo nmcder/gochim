@@ -4,7 +4,7 @@ import { createPopover } from './popover.js'
 import { createMorphClient, type MorphClient } from './morph-client.js'
 import { createUnderlineLayer, type UnderlineLayer } from './underline.js'
 import { toast } from './toast.js'
-import { loadSettings, onSettingsChanged, type Settings } from '../shared/settings.js'
+import { DEFAULT_SETTINGS, loadSettings, onSettingsChanged, type Settings } from '../shared/settings.js'
 import { openIgnoreStore, type IgnoreStore } from '@gochim/store'
 
 /**
@@ -701,20 +701,31 @@ document.addEventListener(
       return
     }
     const rect = session.layer.rectOf(hit)
-    if (rect) popover.show(hit, rect, { acceptKey: settings?.acceptKey, total: wholeDiagnostics().length })
+    if (rect) {
+      popover.show(hit, rect, {
+        acceptKey: settings?.acceptKey ?? DEFAULT_SETTINGS.acceptKey,
+        total: wholeDiagnostics().length,
+      })
+    }
   },
   true,
 )
 
-/** 눌린 키가 설정된 적용 키인가. */
+/**
+ * 눌린 키가 설정된 적용 키인가.
+ *
+ * 설정을 아직 못 읽었을 때 무엇으로 볼지를 `default:`에 숨겨 두지 않는다.
+ * 그러면 기본값을 옮길 때 이 자리가 따라오지 않아, **설정을 안 만진 사람과
+ * 못 읽은 순간이 서로 다른 키를 쓰게 된다.** 한 곳에서만 정하도록 끌어다 쓴다.
+ */
 function isAcceptKey(event: KeyboardEvent): boolean {
-  switch (settings?.acceptKey) {
+  switch (settings?.acceptKey ?? DEFAULT_SETTINGS.acceptKey) {
+    case 'Tab':
+      return event.key === 'Tab' && !event.shiftKey && !event.altKey && !event.ctrlKey
     case 'Enter':
       return event.key === 'Enter' && !event.shiftKey && !event.altKey
-    case 'Alt+Enter':
-      return event.key === 'Enter' && event.altKey
     default:
-      return event.key === 'Tab' && !event.shiftKey && !event.altKey && !event.ctrlKey
+      return event.key === 'Enter' && event.altKey
   }
 }
 

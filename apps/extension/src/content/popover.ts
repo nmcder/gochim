@@ -232,7 +232,9 @@ export function createPopover(actions: PopoverActions): Popover {
       applyButton.className = 'btn btn--primary'
       // 무엇으로 바뀌는지는 바로 위 교정 표시 줄이 이미 보여 준다.
       // 단추에 그 말을 또 적으면 길기만 하고, 대신 단축키를 적으면 다음번엔 손이 먼저 간다.
-      applyButton.textContent = `고치기(${options.acceptKey ?? 'Tab'})`
+      // 부르는 쪽이 늘 실제 설정값을 넘긴다. 여기에 기본값을 또 적으면 둘이 어긋난 날
+      // 카드에 적힌 키와 실제로 듣는 키가 달라진다 — 알려 주는 자리가 거짓말을 하는 셈이다.
+      applyButton.textContent = options.acceptKey ? `고치기(${options.acceptKey})` : '고치기'
       applyButton.addEventListener('click', () => {
         actions.onApply(diagnostic)
         hide()

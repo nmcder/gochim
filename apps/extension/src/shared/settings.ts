@@ -33,7 +33,20 @@ export interface Settings {
    * 커서 자리에서 바로 고칠 수 있어 손이 마우스로 가지 않는다.
    */
   inlineSuggest: boolean
-  /** 팝오버가 열려 있을 때 제안을 받아들이는 키. */
+  /**
+   * 팝오버가 열려 있을 때 제안을 받아들이는 키.
+   *
+   * **기본값이 `Tab`이었다가 `Alt+Enter`로 옮겼다.** 크롬에 붙여 재 보니, 카드가 떠
+   * 있을 때 `Tab`을 누르면 교정이 적용되고 **포커스는 그 칸에 남는다**(가로채면서
+   * `preventDefault`를 하므로). 다음 칸으로 넘어가려던 사람은 **둘 다** 잃는다 —
+   * 원하지 않은 교정을 얻고, 가려던 곳에는 못 간다.
+   *
+   * `Tab`도 `Enter`도 입력칸에서 이미 제 일이 있는 키다(칸 옮기기, 줄 바꾸기).
+   * 그 위에 올리면 언젠가는 손이 먼저 나간다. `Alt+Enter`는 입력칸에서 하는 일이 없다.
+   *
+   * 셋 다 그대로 고를 수 있다. 바뀐 것은 **아무 설정도 하지 않은 사람이 만나는 것**뿐이다.
+   * 카드가 단축키를 그대로 적어 주므로 발견성은 기본값과 상관없다.
+   */
   acceptKey: 'Tab' | 'Enter' | 'Alt+Enter'
   /**
    * 묻지 않고 알아서 고칠지. **기본값은 꺼짐이다.**
@@ -78,7 +91,7 @@ export const DEFAULT_SETTINGS: Settings = {
   categories: [],
   morph: true,
   inlineSuggest: true,
-  acceptKey: 'Tab',
+  acceptKey: 'Alt+Enter',
   autoFix: false,
   suppressNativeSpellcheck: true,
 }
