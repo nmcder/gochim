@@ -367,9 +367,17 @@ function proseLines(markdown) {
 
 function commentLines(source) {
   const out = []
+  let inFence = false
   for (const raw of eachLine(source)) {
     const m = raw.match(/^\s*(?:\/\/|\*|\/\*\*?)\s?(.*)$/)
-    if (!m || skipLine(m[1] ?? '')) continue
+    if (!m) continue
+    // 주석 안의 코드 예시도 산문이 아니다. `proseLines` 가 마크다운에서 하는 것과 같다 —
+    // 이 저장소는 문서에도 주석에도 **일부러 틀리게 적은 예시**를 둘다.
+    if (/^\s*```/.test(m[1] ?? '')) {
+      inFence = !inFence
+      continue
+    }
+    if (inFence || skipLine(m[1] ?? '')) continue
     const line = scrub(m[1] ?? '').trim()
     if (longEnough(line)) out.push(line)
   }

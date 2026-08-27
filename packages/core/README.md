@@ -2,7 +2,7 @@
 
 Korean spelling and spacing checker that runs entirely on the device.
 
-No network calls. No API key. No text ever leaves the page. **18.5 kB gzipped**, zero runtime dependencies.
+No network calls. No API key. No text ever leaves the page. **125 kB gzipped**, zero runtime dependencies.
 
 ```bash
 npm install @gochim/core

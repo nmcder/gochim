@@ -88,10 +88,15 @@ const MAX_PASSES = 4
  * `d.autoFixSafe`로 거른 뒤 `applyFixes`를 쓴다. 확장의 자동 고침이 그렇게 한다.
  */
 export function fix(text: string, options: CheckOptions = {}): string {
+  // 무시 사전을 **한 번만 굳힌다.** `ignore` 는 `Iterable<string>` 이라 제너레이터나
+  // `Set.values()` 같은 일회성 이터러블을 넘길 수 있다. 아래 되풀이가 매번 다시 훑으므로,
+  // 그대로 두면 **두 번째 패스부터 무시 사전이 통째로 풀린다** — 예외도 경고도 없이
+  // 사용자가 "건드리지 마라"고 눌러 둔 항목이 고쳐진다. 짧은 글에서는 안 드러난다.
+  const opts: CheckOptions = options.ignore ? { ...options, ignore: [...options.ignore] } : options
   const seen = new Set([text])
   let out = text
   for (let pass = 0; pass < MAX_PASSES; pass++) {
-    const next = applyFixes(out, check(out, options))
+    const next = applyFixes(out, check(out, opts))
     if (next === out || seen.has(next)) break
     seen.add(next)
     out = next

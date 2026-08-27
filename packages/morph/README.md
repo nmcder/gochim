@@ -24,7 +24,7 @@ fix('나도 너 만큼 잘할 수 있어.', { analyzer })
 
 ## Why this is a separate package
 
-`@gochim/core` is 18.5 kB gzipped and has no runtime dependencies. This package adds an analyzer that is
+`@gochim/core` is 125 kB gzipped and has no runtime dependencies. This package adds an analyzer that is
 **1.6 MB** (403 kB WASM + 1,217 kB model). Most callers do not need it, and the ones who do should pay for it
 knowingly — so the boundary is a package boundary, not a flag.
 

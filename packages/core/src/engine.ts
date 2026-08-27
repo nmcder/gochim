@@ -110,6 +110,7 @@ export function check(
   const categories = options.categories ? new Set(options.categories) : null
   const ignore = options.ignore ? new Set(options.ignore) : null
   const minConfidence = options.minConfidence ?? 0
+  const severities = options.severity ? new Set(options.severity) : null
   const protectedRs = protectedRanges(text)
 
   const found: Diagnostic[] = []
@@ -214,7 +215,12 @@ export function check(
     }
   }
 
-  const result = resolveOverlaps(found)
+  // 심각도는 **겹침을 푸긴 뒤에** 거른다. 먼저 거르면 경고가 막고 있던 자리에서
+  // **더 공격적인 규칙이 드러난다.** '대금 지급 결재를 요청했습니다'는 맞는 글인데,
+  // 그 자리를 덮던 경고를 뽑아내자 `결재→결제` 규칙이 튀어나와 뜻이 바뀌었다.
+  // 걸러내기는 결과를 **줄이기만** 해야 하지, 없던 진단을 드러내서는 안 된다.
+  const resolved = resolveOverlaps(found)
+  const result = severities ? resolved.filter((d) => severities.has(d.severity)) : resolved
   return options.limit != null ? result.slice(0, options.limit) : result
 }
 
@@ -231,6 +237,20 @@ export function mergeDiagnostics(...lists: readonly (readonly Diagnostic[])[]): 
 /**
  * 진단을 원문에 적용한다.
  *
+ * **진단이 가리키는 자리에 그 글자가 아직 있을 때만 손댄다.** 진단은 검사한 순간의
+ * 자리를 들고 있는데, 그 뒤로 글이 바뀌면 그 자리는 다른 글자를 가리킨다.
+ * 대조 없이 잘라 붙이면 멀쩡한 글이 부서진다 — 공개 API라 남이 그렇게 쓸 수 있다.
+ *
+ * ```ts
+ * const 진단 = check('그러면 안 되요.')          // [되요]@6,8
+ * applyFixes('완전히 다른 문장입니다요.', 진단)
+ * // 예전:  '완전히 다른돼요장입니다요.'   ← 남의 글을 잘라 냈다
+ * // 지금:  '완전히 다른 문장입니다요.'    ← 그대로 둔다
+ * ```
+ *
+ * 확장은 진작부터 세 군데에서 이 대조를 손수 했다. 라이브러리 쪽에 두면
+ * 쓰는 사람이 잊을 수가 없다.
+ *
  * @param pick 어떤 제안을 쓸지 고른다. 기본은 첫 번째(가장 유력한) 제안.
  *             null을 돌려주면 그 진단은 건너뛴다.
  */
@@ -245,6 +265,8 @@ export function applyFixes(
   let lastStart = Number.POSITIVE_INFINITY
   for (const d of ordered) {
     if (d.end > lastStart) continue // 겹치는 진단은 건너뛴다
+    // 그 자리가 아직 그 글자인가. 아니면 이 진단은 다른 글에서 온 것이거나 낡은 것이다.
+    if (text.slice(d.start, d.end) !== d.text) continue
     const replacement = pick(d)
     if (replacement == null) continue
     out = out.slice(0, d.start) + replacement + out.slice(d.end)
