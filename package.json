@@ -21,6 +21,7 @@
     "build:extension": "npm run build -w @gochim/core && npm run build -w @gochim/morph && npm run build -w @gochim/store && npm run build -w @gochim/extension",
     "pack:extension": "npm run build:extension && node apps/extension/scripts/pack.mjs",
     "bench": "npm run build -w @gochim/core && npm run build -w @gochim/morph && node scripts/bench.mjs",
+    "size": "npm run build -w @gochim/core && npm run build -w @gochim/store && node scripts/size-report.mjs",
     "prose:report": "npm run build -w @gochim/core && node scripts/prose-report.mjs",
     "corpus:report": "npm run build -w @gochim/core && node scripts/corpus-report.mjs",
     "guard": "npm run build -w @gochim/core && npm run build -w @gochim/morph && node scripts/guard.mjs"

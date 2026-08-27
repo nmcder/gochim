@@ -101,7 +101,13 @@ export interface Rule {
   severity: Severity
   /** 문맥을 모르는 상태에서의 기본 확신도. */
   confidence: number
-  /** 전역(`g`) 플래그가 붙은 정규식. */
+  /**
+   * 전역(`g`) 플래그가 붙은 정규식.
+   *
+   * 빠뜨려도 된다 — `check`가 사본에 `g`를 붙여 쓴다. 넘긴 정규식 자체는 건드리지 않는다.
+   * (`g` 없는 `exec`는 언제나 0번째 자리부터 다시 찾으므로, 그대로 훑으면 멈추지 않는다.)
+   * `defineRule`·`defineLexicon`을 쓰면 애초에 붙여 준다.
+   */
   pattern: RegExp
   /** 오류로 판정하면 Finding을, 아니면 null을 돌려준다. */
   resolve(ctx: RuleContext): Finding | null

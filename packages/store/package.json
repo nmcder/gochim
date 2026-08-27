@@ -18,7 +18,8 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
@@ -28,7 +29,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
     "prepublishOnly": "npm run build && node ../../scripts/check-publish.mjs"
   },
   "peerDependencies": {
@@ -38,7 +40,7 @@
     "@gochim/core": "*"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19.0"
   },
   "publishConfig": {
     "access": "public"

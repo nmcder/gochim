@@ -36,6 +36,11 @@ whether anyone comes back tomorrow.
 - **Local only.** No `chrome.storage.sync`, no server. The point of the project is that text stays on the device;
   the ignore list is text too.
 
+## Requirements
+
+ESM only, Node ≥ 20.19 (or any modern browser/bundler). `@gochim/core` is a peer dependency and must be on the
+same version — the key format comes from there.
+
 ## API
 
 | | |

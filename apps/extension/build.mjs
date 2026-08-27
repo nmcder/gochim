@@ -112,11 +112,13 @@ function report() {
   const manifest = JSON.parse(readFileSync(resolve(OUT, 'manifest.json'), 'utf8'))
   const files = ['content.js', 'background.js', 'options.js', 'popup.js', 'offscreen.js', 'offscreen.html', 'content.css', 'garu/morph-worker.js']
   const total = files.reduce((sum, file) => sum + statSync(resolve(OUT, file)).size, 0)
+  // 1 kB = 1,000바이트. scripts/size-report.mjs 와 같은 셈법이어야 한다 —
+  // 한쪽이 1,024로 세면 같은 파일을 두고 저장소가 스스로 다른 숫자를 말하게 된다.
   console.log(`\n고침 확장 v${manifest.version}`)
-  for (const file of files) console.log(`  ${file.padEnd(16)} ${(statSync(resolve(OUT, file)).size / 1024).toFixed(1)} kB`)
-  console.log(`  ${'합계'.padEnd(15)} ${(total / 1024).toFixed(1)} kB`)
+  for (const file of files) console.log(`  ${file.padEnd(16)} ${(statSync(resolve(OUT, file)).size / 1000).toFixed(1)} kB`)
+  console.log(`  ${'합계'.padEnd(15)} ${(total / 1000).toFixed(1)} kB`)
   const assets = ['garu/garu_wasm_bg.wasm', 'garu/base.gmdl']
-  for (const file of assets) console.log(`  ${file.padEnd(16)} ${(statSync(resolve(OUT, file)).size / 1024).toFixed(0)} kB  (켠 사람만 내려받음)`)
+  for (const file of assets) console.log(`  ${file.padEnd(16)} ${(statSync(resolve(OUT, file)).size / 1000).toFixed(0)} kB  (켠 사람만 내려받음)`)
   console.log(`  권한             ${manifest.permissions.join(', ')} (네트워크 권한 없음)`)
   console.log(`\n크롬에서 불러오기: chrome://extensions → 개발자 모드 → '압축해제된 확장 프로그램을 로드' → ${OUT}`)
 }

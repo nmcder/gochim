@@ -16,7 +16,7 @@
 자기소개서, 진단서, 아직 공개하지 않은 원고라면 이야기가 다르다.
 
 고침은 `check(text) → Diagnostic[]` 하나짜리 순수 함수다. 부작용도, 통신도, 전역 상태도 없다.
-엔진 전체가 **gzip 125 kB**이고 런타임 의존성이 0개다. (절반 이상이 "왜 틀렸는지" 설명 텍스트다)
+엔진 전체가 **gzip 127 kB**이고 런타임 의존성이 0개다. (절반 이상이 "왜 틀렸는지" 설명 텍스트다)
 
 ## 측정값
 
@@ -27,11 +27,11 @@
 | --- | --- |
 | **정밀도** | **1.000** (오탐 0건 / 정상 문장 553개) — 형태소 층을 켜도 1.000 |
 | 재현율 | 0.957 (1층만) → **0.961** (형태소 층 포함) |
-| 규칙 | 문자열 232개 + 형태소 6개. 예시 912개, 반례 1,339개가 테스트로 강제됨 |
-| 테스트 | 3,567개 |
-| 검사 속도 | 1층 **4,000자 1.07ms** (p95 1.59ms) · 형태소 층 19ms/1,000자 (`npm run bench`) |
+| 규칙 | 문자열 232개 + 형태소 6개. 예시 912개, 반례 1,370개가 테스트로 강제됨 |
+| 테스트 | 3,573개 |
+| 검사 속도 | 1층 **4,000자 2.66ms** (p95 3.13ms) · 1,000자당 0.66ms (`npm run bench`) |
 | 형태소 층 초기화 | 70~101ms, 한 번만 (크롬 실측) |
-| 번들 | 코어 minified 568 kB · **gzip 125 kB**, 런타임 의존성 0개 |
+| 번들 | 코어 minified 581 kB · **gzip 127 kB**, 런타임 의존성 0개 (`npm run size`) |
 
 저장소 안의 한국어 산문 9,800여 줄(README·ADR·규칙 파일 주석·테스트)에도 규칙을 돌려 봅니다.
 지적이 나오는 자리는 일부러 넣어 둔 오류 예시뿐입니다.
@@ -181,7 +181,7 @@ docs/decisions/    설계 기록(ADR)
 | 2층 · 형태소 이상 탐지 | 점수 기반 오타 탐지 | [기각](docs/decisions/0006-rejected-score-based-typo-detection.md) |
 
 **코어는 형태소 분석기를 모른다.** `check(text, { analyzer })`로 주입받을 뿐이다.
-그래서 코어만 쓰면 125 kB로 끝나고, 정확도가 더 필요할 때만 1.6 MB를 얹는다.
+그래서 코어만 쓰면 127 kB로 끝나고, 정확도가 더 필요할 때만 1.66 MB를 얹는다.
 
 ## 개발
 
@@ -196,13 +196,22 @@ npm run corpus:report           # 갈래가 다른 실문 7편 성적표
 npm run guard                   # 넘으면 안 되는 선을 한 번에 확인
 npm run build:extension         # 크롬 확장 → apps/extension/dist
 npm run bench                   # 성능 측정 (--morph로 형태소 층 포함)
+npm run size                    # 번들 크기 실측 — README의 숫자는 여기서 나온 값이다
 npm run pack:extension          # 배포용 zip → apps/extension/release/
 npm run probe:sync              # garu-ko 실측 하네스 에셋 동기화
 ```
 
 ## 배포
 
-세 패키지 모두 `npm publish --dry-run`을 통과합니다 (core 80.8kB, morph 5.0kB, store 5.8kB).
+세 패키지 모두 `npm publish --dry-run`을 통과합니다 (core 210 kB, morph 6.2 kB, store 4.8 kB —
+`npm pack --dry-run`으로 다시 잴 수 있습니다).
+
+`prepublishOnly`가 [check-publish.mjs](scripts/check-publish.mjs)를 부릅니다. `dist`는
+`.gitignore` 대상이라 새 클론에서 그냥 publish 하면 **빈 패키지가 나가는데**, 한 번 나간 판은
+다시 못 씁니다. 그래서 파일이 다 있는지만 보지 않고 **받는 쪽 흉내를 냅니다** — CommonJS에서
+불러도 닿는가, 최상위 `await`가 섞이지 않았는가, 소스맵이 안 나가는 파일을 가리키지 않는가,
+세 패키지 판이 어긋나지 않았는가, 코드에 적어 둔 `VERSION`이 `package.json`과 같은가.
+하나라도 어기면 publish가 시작되지 않습니다.
 
 ```bash
 npm run pack:extension   # apps/extension/release/gochim-extension-v0.1.0.zip (1.45MB)

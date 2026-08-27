@@ -24,8 +24,8 @@ fix('나도 너 만큼 잘할 수 있어.', { analyzer })
 
 ## Why this is a separate package
 
-`@gochim/core` is 125 kB gzipped and has no runtime dependencies. This package adds an analyzer that is
-**1.6 MB** (403 kB WASM + 1,217 kB model). Most callers do not need it, and the ones who do should pay for it
+`@gochim/core` is 127 kB gzipped and has no runtime dependencies. This package adds an analyzer whose assets are
+**1.66 MB** (412 kB WASM + 1,246 kB model). Most callers do not need it, and the ones who do should pay for it
 knowingly — so the boundary is a package boundary, not a flag.
 
 The core never imports this. It declares an `Analyzer` interface and you inject an implementation:
@@ -56,7 +56,15 @@ do the work:
 | `실수 없이` | untouched (hard-coded exception) | untouched (`실수/NNG`) |
 | `할수있는` | detected | detected (`수/NNB`) |
 
-Measured on the project's golden test set: recall 0.939 → 0.952, precision stays at **1.000**.
+On the project's golden test set the analyzer moves recall from 0.957 to 0.961 while precision stays at
+**1.000**. That understates it. On writing the rules had never seen — 15 real pieces, 9,613 characters, 463
+errors — it is the difference between **0.786 and 0.955**, because unseen prose is full of dependent nouns with
+no attached particle (`~하는 것 같다`) and string rules cannot find those at all.
+
+## Requirements
+
+ESM only, Node ≥ 20.19 (or any modern browser/bundler). `@gochim/core` is a peer dependency and must be on the
+same version.
 
 ## Loading
 
@@ -71,6 +79,13 @@ const analyzer = await createAnalyzer({
 
 Initialization is around **100 ms** (measured in Chrome), and each sentence analyzes in 0.1–0.6 ms.
 Call `analyzer.destroy()` when you are done to free the WASM instance.
+
+Long inputs are split into sentences before analysis. A 4,000-character document analyzed whole takes 612 ms
+because the lattice grows superlinearly; split, it takes 4 ms.
+
+On Node you will see `using deprecated parameters for the initialization function` on the first call. That comes
+from `garu-ko`'s own wasm-bindgen glue calling its initializer positionally — it is upstream, harmless, and does
+not appear in browsers.
 
 ## Version pin
 

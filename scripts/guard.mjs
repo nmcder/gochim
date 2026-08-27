@@ -17,7 +17,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { allMorphRules, allRules, applyFixes, check } from '../packages/core/dist/index.js'
+import { allMorphRules, allRules, applyFixes, check, VERSION } from '../packages/core/dist/index.js'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf8'))
@@ -488,6 +488,55 @@ must(
   '자동 적용 선언이 전부 근거를 갖췄다',
   근거없는선언.length === 0,
   `근거 없는 선언 ${근거없는선언.length}건`,
+)
+
+/* ── 7. 내보낼 수 있는 상태인가 ──────────────────────────────
+ *
+ * `prepublishOnly`가 `check-publish.mjs`로 같은 것을 더 깊이 본다. 그런데 그건
+ * **내보내는 순간에만** 돈다 — 그때 막히면 이미 태그를 밀고 릴리스가 도는 중이다.
+ * 손으로 고칠 수 있는 것 몇 가지는 여기서 미리 잡아, 밀기 전에 알게 한다.
+ */
+
+const 패키지 = ['core', 'morph', 'store'].map((name) => read(`packages/${name}/package.json`))
+const 코어 = 패키지.find((p) => p.name === '@gochim/core')
+
+// store 는 코어의 `ignoreKey` 를 실행 시점에 가져다 쓰고 morph 는 코어의 타입에 기댄다.
+// 둘 다 peer 로 `^코어판` 을 거는데 0.x 에서 캐럿은 `<0.2.0` 이라, 코어만 올리면 곧바로 ERESOLVE 다.
+// 범위를 느슨하게 푸는 것은 답이 아니다 — 안 맞는 짝이 조용히 설치된다. 셋을 함께 올린다.
+const 판어긋남 = 패키지.filter((p) => p.version !== 코어.version).map((p) => `${p.name}@${p.version}`)
+must(
+  `세 패키지가 같은 판이다 — ${코어.version}`,
+  판어긋남.length === 0,
+  판어긋남.length ? `어긋난 것 ${판어긋남.join(', ')} — 셋은 늘 함께 올린다` : '',
+)
+
+const peer어긋남 = 패키지
+  .filter((p) => p.peerDependencies?.['@gochim/core'] && p.peerDependencies['@gochim/core'] !== `^${코어.version}`)
+  .map((p) => `${p.name} → ${p.peerDependencies['@gochim/core']}`)
+must(
+  'peer 범위가 코어 판을 가리킨다',
+  peer어긋남.length === 0,
+  peer어긋남.length ? `어긋난 것 ${peer어긋남.join(', ')} — '^${코어.version}' 이어야 한다` : '',
+)
+
+must(
+  `코드에 적힌 VERSION 이 package.json 과 같다 — ${VERSION}`,
+  VERSION === 코어.version,
+  VERSION === 코어.version ? '' : `VERSION 은 '${VERSION}' 인데 package.json 은 ${코어.version} 이다`,
+)
+
+// `require()` 가 닿을 조건이 없으면 CommonJS 쪽에서 부르는 순간
+// "No exports main defined" 로 끝난다. ESM이라는 말은 한마디도 안 나온다.
+const 조건없음 = 패키지
+  .filter((p) => {
+    const c = p.exports?.['.']
+    return c && typeof c === 'object' && !c.require && !c.default
+  })
+  .map((p) => p.name)
+must(
+  'exports 가 CommonJS 쪽에서도 닿는다',
+  조건없음.length === 0,
+  조건없음.length ? `require/default 가 없는 것 ${조건없음.join(', ')}` : '',
 )
 
 /**

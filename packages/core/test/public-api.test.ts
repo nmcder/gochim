@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { applyFixes, check, fix, ignoreKey } from '../src/index.js'
+import { applyFixes, check, fix, ignoreKey, VERSION, allRules } from '../src/index.js'
+import type { Rule } from '../src/types.js'
 
 /**
  * 공개 API가 스스로를 지키는가.
@@ -88,5 +89,75 @@ describe('무시 사전은 일회성 이터러블로 넘겨도 풀리지 않는�
     // fix() 는 고정점까지 되풀이하며 check() 를 여러 번 부른다.
     // 이터러블을 그대로 다시 훑으면 두 번째 패스부터 무시 사전이 비게 된다.
     expect(fix(글, { ignore: make() })).toBe('안 돼요. 그리고 어의없다.')
+  })
+})
+
+/**
+ * 남이 손으로 지은 규칙이 브라우저를 얼리지 못하게 한다.
+ *
+ * `Rule`과 `CheckOptions.rules`가 공개 타입이라, 정규식을 잘못 지어 오는 것은
+ * **막을 수 없고 일어날 일**이다. 라이브러리가 그것을 감당해야 한다.
+ *
+ * 아래 테스트가 깨지면 통과/실패가 아니라 **테스트가 끝나지 않는다.** 그래서 시간 제한을 건다.
+ */
+describe('남이 지은 규칙이 검사를 멈추지 못하게 한다', () => {
+  const 뼈대: Omit<Rule, 'pattern' | 'resolve'> = {
+    id: 'probe',
+    category: 'spelling',
+    severity: 'error',
+    confidence: 0.9,
+    examples: [{ wrong: 'foo', right: 'bar' }],
+  }
+
+  it('g 플래그가 없어도 끝난다', { timeout: 5000 }, () => {
+    // g 없는 exec 는 lastIndex 를 보지도 올리지도 않아 언제나 0번째부터 다시 찾는다.
+    const 규칙: Rule = { ...뼈대, pattern: /foo/, resolve: () => ({ suggestions: ['bar'], message: 'x' }) }
+    const 결과 = check('foo 그리고 foo', { rules: [규칙] })
+    expect(결과.map((d) => d.start)).toEqual([0, 8])
+  })
+
+  it('넘긴 정규식을 우리가 바꿔 놓지 않는다', { timeout: 5000 }, () => {
+    const 패턴 = /foo/
+    check('foo', { rules: [{ ...뼈대, pattern: 패턴, resolve: () => ({ suggestions: ['bar'], message: 'x' }) }] })
+    // 남의 객체를 몰래 고치면 그쪽 코드가 먼저 부서진다.
+    expect(패턴.global).toBe(false)
+    expect(패턴.flags).toBe('')
+  })
+
+  it('resolve 가 lastIndex 를 되감아도 끝난다', { timeout: 5000 }, () => {
+    const 패턴 = /foo/g
+    const 규칙: Rule = {
+      ...뼈대,
+      pattern: 패턴,
+      resolve: () => {
+        패턴.lastIndex = 0 // 같은 정규식으로 test() 를 부르면 실제로 이렇게 된다
+        return { suggestions: ['bar'], message: 'x' }
+      },
+    }
+    expect(check('foo foo foo', { rules: [규칙] })).toHaveLength(3)
+  })
+
+  it('길이 0 매치도 끝난다', { timeout: 5000 }, () => {
+    const 규칙: Rule = { ...뼈대, pattern: /(?:)/g, resolve: () => ({ suggestions: ['x'], message: 'x' }) }
+    expect(check('아무 글', { rules: [규칙] })).toEqual([])
+  })
+
+  it('규칙 하나가 터져도 나머지는 돈다', { timeout: 5000 }, () => {
+    const 터지는: Rule = {
+      ...뼈대,
+      pattern: /foo/,
+      resolve: () => {
+        throw new Error('boom')
+      },
+    }
+    expect(check('foo 안 되요.', { rules: [터지는, ...allRules] }).length).toBeGreaterThan(0)
+  })
+})
+
+describe('공개 상수', () => {
+  it('VERSION 은 리터럴 타입이 아니라 string 이다', () => {
+    // 리터럴로 새어 나가면 남이 쓴 `if (VERSION === '0.2.0')` 가 컴파일 오류가 된다.
+    const 대조: string = VERSION
+    expect(대조).toMatch(/^\d+\.\d+\.\d+/)
   })
 })

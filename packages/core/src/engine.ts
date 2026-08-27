@@ -90,6 +90,32 @@ function buildDiagnostic(input: BuildInput): Diagnostic | null {
 }
 
 /**
+ * 전역(`g`) 플래그가 없는 정규식을 같은 것으로 바꿔 준다.
+ *
+ * `exec`는 `g`가 없으면 **언제나 0번째 자리부터 다시 찾는다.** `lastIndex`를 보지도,
+ * 올리지도 않는다. 아래 `while ((m = re.exec(text)))` 는 그래서 같은 자리를 영원히 되찾고,
+ * 진단은 무한히 쌓인다 — 멈추는 것이 아니라 탭이 죽는다.
+ *
+ * 내장 규칙은 `defineRule`이 `g`를 붙여 주므로 이 자리에 오지 않는다. 그러나 `Rule`과
+ * `CheckOptions.rules`가 공개 타입이라 **남이 손으로 지은 규칙**은 그냥 들어온다.
+ * 라이브러리가 남의 실수로 브라우저를 얼려서는 안 되므로 여기서 조용히 고쳐 쓴다.
+ *
+ * 넘어온 정규식을 **고치지 않는다.** 남의 객체를 몰래 바꾸면 그쪽 코드가 먼저 부서진다.
+ * 대신 사본을 만들어 두고 다음번에 다시 쓴다 — `check`는 타자 한 번에 한 번씩 도는 자리라
+ * 매번 정규식을 새로 컴파일할 여유가 없다.
+ */
+const globalized = new WeakMap<RegExp, RegExp>()
+function withGlobal(re: RegExp): RegExp {
+  if (re.global) return re
+  let copy = globalized.get(re)
+  if (!copy) {
+    copy = new RegExp(re.source, `${re.flags}g`)
+    globalized.set(re, copy)
+  }
+  return copy
+}
+
+/**
  * 텍스트를 검사한다.
  *
  * 순수 함수다 — 네트워크도, 전역 상태도, 부작용도 없다.
@@ -127,48 +153,54 @@ export function check(
   for (const rule of rules) {
     if (categories && !categories.has(rule.category)) continue
 
-    const re = rule.pattern
+    const re = withGlobal(rule.pattern)
     re.lastIndex = 0
     let m: RegExpExecArray | null
 
     while ((m = re.exec(text)) !== null) {
-      if (m[0].length === 0) {
-        re.lastIndex += 1
-        continue
-      }
+      // **다음 자리를 먼저 정해 둔다.** 이 아래에서 남의 `resolve`가 돌고,
+      // 그 안에서 같은 정규식을 `test`하거나 `check`를 다시 부르면 `lastIndex`가
+      // 되감긴다. 그러면 같은 자리를 다시 잡아 영원히 돌게 되므로, 무슨 일이
+      // 있었든 훑는 자리는 **반드시 앞으로만** 가도록 끝에서 되돌려 놓는다.
+      // 빈 매치도 이 한 줄이 함께 막는다 (`|| 1`).
+      const nextIndex = m.index + (m[0].length || 1)
 
-      const ctx: RuleContext = {
-        text,
-        match: m,
-        index: m.index,
-        before: m.index > 0 ? text[m.index - 1]! : '',
-        after: text[m.index + m[0].length] ?? '',
-      }
-
-      let finding
-      try {
-        finding = rule.resolve(ctx)
-      } catch {
-        // 규칙 하나가 터져도 전체 검사는 계속돼야 한다.
-        continue
-      }
-      if (!finding || finding.suggestions.length === 0) continue
-
-      const start = m.index + (finding.offset ?? 0)
-      const end = start + (finding.length ?? m[0].length - (finding.offset ?? 0))
-      accept(
-        buildDiagnostic({
+      if (m[0].length > 0) {
+        const ctx: RuleContext = {
           text,
-          ruleId: rule.id,
-          category: rule.category,
-          severity: rule.severity,
-          confidence: rule.confidence,
-          autoFixSafe: rule.autoFixSafe === true,
-          start,
-          end,
-          finding,
-        }),
-      )
+          match: m,
+          index: m.index,
+          before: m.index > 0 ? text[m.index - 1]! : '',
+          after: text[m.index + m[0].length] ?? '',
+        }
+
+        let finding: Finding | null = null
+        try {
+          finding = rule.resolve(ctx)
+        } catch {
+          // 규칙 하나가 터져도 전체 검사는 계속돼야 한다.
+        }
+
+        if (finding && finding.suggestions.length > 0) {
+          const start = m.index + (finding.offset ?? 0)
+          const end = start + (finding.length ?? m[0].length - (finding.offset ?? 0))
+          accept(
+            buildDiagnostic({
+              text,
+              ruleId: rule.id,
+              category: rule.category,
+              severity: rule.severity,
+              confidence: rule.confidence,
+              autoFixSafe: rule.autoFixSafe === true,
+              start,
+              end,
+              finding,
+            }),
+          )
+        }
+      }
+
+      re.lastIndex = nextIndex
     }
   }
 
