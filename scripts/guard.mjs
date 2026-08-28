@@ -17,7 +17,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { allMorphRules, allRules, applyFixes, check, VERSION } from '../packages/core/dist/index.js'
+import { allMorphRules, allRules, applyFixes, check, fix, VERSION } from '../packages/core/dist/index.js'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => JSON.parse(readFileSync(resolve(ROOT, p), 'utf8'))
@@ -217,6 +217,38 @@ if (analyzer) {
     `이모지가 섞여도 재현율이 같다 (형태소 층) — ${emojiR.ratio.toFixed(3)}`,
     emojiR.hit === corpusM.hit && emojiR.total === corpusM.total,
     `이모지 없이 ${corpusM.hit}/${corpusM.total} · 이모지 ${emojiR.hit}/${emojiR.total}`,
+  )
+}
+
+/* ── 4-2. 모두 고친 뒤 정답과 글자까지 같은가 ──────────
+ *
+ * 재현율은 **구간이 겹치기만 해도** 잡은 것으로 센다. `몇분뒤에`를
+ * `몇 분뒤에`까지만 고쳐도 점수는 오르지만 사용자 눈에는 여전히 틀린 글이 남는다.
+ * 그래서 '모두 고치기'를 누른 것과 똑같이 전부 적용한 뒤 정답과 통째로 견준다.
+ * **README가 이 줄을 진짜 성적이라고 적어 둔 자리**다.
+ *
+ * 그런데 아무도 다시 재지 않아 조용히 어긋났다 — README에 `5/15`로 적힌 것이
+ * 어느새인가 `4/15`가 돼 있었고, 성적표를 따로 돌려 보기 전까지 아무도 몰랐다.
+ * 숫자를 손으로 적어 두면 언젠가 거짓말이 된다. 여기서 매번 재고 밑으로 내려가면 멈춘다.
+ *
+ * `severity: ['error']`로 경고를 뺀다. 경고는 "규정은 이쪽이다"라는 안내라
+ * 정답글이 그쪽을 고르지 않았다고 틀린 것이 아니다.
+ */
+if (analyzer) {
+  const 정확히 = (texts, key) => texts.filter((t) => fix(t.source, { analyzer, severity: ['error'] }) === t[key]).length
+  const FLOOR_CORPUS_EXACT = 4
+  const FLOOR_PROSE_EXACT = 7
+  const corpusExact = 정확히(corpus.texts, 'corrected')
+  const proseExact = 정확히(prose.paragraphs, 'corrected')
+  must(
+    `모두 고친 뒤 글자까지 같은 글 ${corpusExact}/${corpus.texts.length} ≥ ${FLOOR_CORPUS_EXACT} (여러 갈래)`,
+    corpusExact >= FLOOR_CORPUS_EXACT,
+    corpusExact >= FLOOR_CORPUS_EXACT ? '' : 'README의 숫자도 함께 고칠 것',
+  )
+  must(
+    `모두 고친 뒤 글자까지 같은 문단 ${proseExact}/${prose.paragraphs.length} ≥ ${FLOOR_PROSE_EXACT} (일기)`,
+    proseExact >= FLOOR_PROSE_EXACT,
+    proseExact >= FLOOR_PROSE_EXACT ? '' : 'README의 숫자도 함께 고칠 것',
   )
 }
 
