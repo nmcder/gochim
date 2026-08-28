@@ -1,6 +1,6 @@
 {
   "name": "@gochim/morph",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Morphological analyzer adapter for @gochim/core — enables part-of-speech aware Korean spacing rules, fully on-device.",
   "keywords": [
     "korean",
@@ -38,7 +38,7 @@
     "garu-ko": "0.9.14"
   },
   "peerDependencies": {
-    "@gochim/core": "^0.1.0"
+    "@gochim/core": "^0.2.0"
   },
   "devDependencies": {
     "@gochim/core": "*"

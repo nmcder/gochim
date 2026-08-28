@@ -220,7 +220,7 @@ npm run probe:sync              # garu-ko 실측 하네스 에셋 동기화
 하나라도 어기면 publish가 시작되지 않습니다.
 
 ```bash
-npm run pack:extension   # apps/extension/release/gochim-extension-v0.1.0.zip (1.45MB)
+npm run pack:extension   # apps/extension/release/gochim-extension-v0.2.0.zip (1.45MB)
 ```
 
 태그를 밀면 GitHub Actions가 검증·빌드·zip을 만들어 릴리스 초안에 붙입니다.

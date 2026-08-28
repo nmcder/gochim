@@ -40,11 +40,16 @@ jobs:
       - name: 골든 테스트셋 성적표
         run: node scripts/golden-report.mjs | tee golden-report.txt
 
+      # 릴리스 본문에 CHANGELOG를 통째로 넣으면 44 kB가 그대로 올라간다.
+      # 이 판의 절만 잘라 낸다 — 두 번째 '## '를 만나면 멈춘다.
+      - name: 이 판의 변경 기록만 잘라내기
+        run: awk '/^## /{n++} n==1' CHANGELOG.md > release-notes.md
+
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             apps/extension/release/*.zip
             golden-report.txt
-          body_path: CHANGELOG.md
+          body_path: release-notes.md
           draft: true
           generate_release_notes: false

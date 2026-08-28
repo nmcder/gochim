@@ -1,6 +1,6 @@
 {
   "name": "@gochim/demo",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "고침 웹 데모 — 붙여넣고 바로 확인하는 온디바이스 한국어 교정기",

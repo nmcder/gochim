@@ -1,6 +1,6 @@
 {
   "name": "@gochim/store",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "IndexedDB-backed ignore dictionary for @gochim/core — remembers the corrections you dismissed, without sending anything anywhere.",
   "keywords": [
     "korean",
@@ -34,7 +34,7 @@
     "prepublishOnly": "npm run build && node ../../scripts/check-publish.mjs"
   },
   "peerDependencies": {
-    "@gochim/core": "^0.1.0"
+    "@gochim/core": "^0.2.0"
   },
   "devDependencies": {
     "@gochim/core": "*"
