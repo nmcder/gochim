@@ -2,7 +2,7 @@
 
 Korean spelling and spacing checker that runs entirely on the device.
 
-No network calls. No API key. No text ever leaves the page. **127 kB gzipped**, zero runtime dependencies.
+No network calls. No API key. No text ever leaves the page. **128 kB gzipped**, zero runtime dependencies.
 
 ```bash
 npm install @gochim/core
@@ -162,15 +162,15 @@ Measured against the golden test set in this repo (`npm run golden:report`, `npm
 | --- | --- |
 | Precision | **1.000** — zero false positives across 553 correct sentences, 326 of which are traps written specifically to break naive rules |
 | Recall | 0.957 (0.961 with the morphological layer) |
-| Rules | 232 string + 6 part-of-speech, carrying 912 examples and 1,370 counter-examples — all enforced by the test suite |
+| Rules | 232 string + 9 part-of-speech, carrying 929 examples and 1,388 counter-examples — all enforced by the gates |
 | Tests | 3,573 |
 | Throughput | 0.66 ms per 1,000 characters (4,000 chars: 2.7 ms median, 3.1 ms p95) |
-| Size | 581 kB minified, **127 kB gzipped** |
+| Size | 588 kB minified, **128 kB gzipped** |
 
 Those recall figures are against a golden set written in this repo. On writing it had never seen — 15 pieces of
 real Korean across messenger, email, cover letters, comments, reviews, reports, diaries — recall is **0.955**
 with the morphological layer and 0.786 without. That gap is the honest one; see the
-[root README](https://github.com/nmcder/gochim#처음-보는-글에서의-성적).
+[root README](https://github.com/nmcder/gochim#갈래가-다른-실문-성적표).
 
 ## What it does not do
 
